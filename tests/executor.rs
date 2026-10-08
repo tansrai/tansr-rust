@@ -374,7 +374,12 @@ fn auth() -> Arc<dyn Authorizer> {
     })
 }
 fn journal(dir: &tempfile::TempDir) -> Arc<FileJournal> {
-    Arc::new(FileJournal::open(dir.path().join("private")).unwrap())
+    Arc::new(FileJournal::open(private_journal_path(dir)).unwrap())
+}
+fn private_journal_path(dir: &tempfile::TempDir) -> std::path::PathBuf {
+    // Resolve only the directory this fixture created, before appending journal paths.
+    // macOS system temporary roots may include a /var -> /private/var alias.
+    dir.path().canonicalize().unwrap().join("private")
 }
 
 #[test]
@@ -459,7 +464,7 @@ fn requiring_business_output_rejects_before_register_claim_or_handler() {
     );
     assert_eq!(count.load(Ordering::SeqCst), 0);
     assert_eq!(
-        std::fs::read_dir(dir.path().join("private"))
+        std::fs::read_dir(private_journal_path(&dir))
             .unwrap()
             .count(),
         0
@@ -614,7 +619,7 @@ async fn forged_remote_status_and_denied_credentials_cannot_create_claims() {
         );
         assert_eq!(calls.load(Ordering::SeqCst), 0);
         assert_eq!(
-            std::fs::read_dir(dir.path().join("private"))
+            std::fs::read_dir(private_journal_path(&dir))
                 .unwrap()
                 .count(),
             0
@@ -671,7 +676,7 @@ async fn restricted_status_denial_has_no_controller_fallback_and_zero_handler() 
     assert!(requests[0].starts_with("GET /api/terminal/executors/device/operations/op?"));
     assert_eq!(calls.load(Ordering::SeqCst), 0);
     assert_eq!(
-        std::fs::read_dir(dir.path().join("private"))
+        std::fs::read_dir(private_journal_path(&dir))
             .unwrap()
             .count(),
         0
@@ -947,7 +952,7 @@ async fn corrupted_claim_cannot_be_deleted_and_reexecuted() {
     let j = journal(&dir);
     let op = operation();
     assert!(matches!(j.claim(&op).await.unwrap(), ClaimResult::Claimed));
-    let claim = std::fs::read_dir(dir.path().join("private"))
+    let claim = std::fs::read_dir(private_journal_path(&dir))
         .unwrap()
         .map(|e| e.unwrap().path())
         .find(|p| p.extension().is_some_and(|e| e == "claim"))
@@ -966,8 +971,9 @@ fn journal_rejects_relative_and_symlink_directory() {
     #[cfg(unix)]
     {
         let d = tempfile::tempdir().unwrap();
-        std::os::unix::fs::symlink(d.path(), d.path().join("linked")).unwrap();
-        assert!(FileJournal::open(d.path().join("linked")).is_err());
+        let root = d.path().canonicalize().unwrap();
+        std::os::unix::fs::symlink(&root, root.join("linked")).unwrap();
+        assert!(FileJournal::open(root.join("linked")).is_err());
     }
 }
 
@@ -976,8 +982,9 @@ fn journal_rejects_relative_and_symlink_directory() {
 async fn renamed_journal_directory_cannot_redirect_claims_or_receipts() {
     use std::os::unix::fs::PermissionsExt;
     let directory = tempfile::tempdir().unwrap();
-    let original = directory.path().join("private");
-    let moved = directory.path().join("moved");
+    let root = directory.path().canonicalize().unwrap();
+    let original = root.join("private");
+    let moved = root.join("moved");
     let journal = FileJournal::open(&original).unwrap();
     let operation = operation();
     assert!(matches!(
@@ -1031,7 +1038,7 @@ fn executor_child_claim() {
 async fn subprocess_claim_survives_abrupt_exit_without_reexecution() {
     let dir = tempfile::tempdir().unwrap();
     let op = operation();
-    let input = dir.path().join("operation.json");
+    let input = dir.path().canonicalize().unwrap().join("operation.json");
     std::fs::write(&input, serde_json::to_vec(&op).unwrap()).unwrap();
     let child = std::process::Command::new(std::env::current_exe().unwrap())
         .args(["--exact", "executor_child_claim", "--nocapture"])

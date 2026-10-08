@@ -239,7 +239,7 @@ async fn permission_harness(fixture: &support::Serve) -> PermissionHarness {
             RunnerOptions {
                 client: executor.clone(),
                 registration,
-                journal: Arc::new(FileJournal::open(journal.path().join("private")).unwrap()),
+                journal: Arc::new(FileJournal::open(private_journal_path(&journal)).unwrap()),
                 tools: BTreeMap::from([(
                     "BusinessLookup".into(),
                     Tool::new(
@@ -367,7 +367,7 @@ async fn no_permission_execution(harness: &PermissionHarness) {
     );
     assert_eq!(harness.executions.load(Ordering::SeqCst), 0);
     assert_eq!(
-        std::fs::read_dir(harness._journal.path().join("private"))
+        std::fs::read_dir(private_journal_path(&harness._journal))
             .unwrap()
             .count(),
         0,
@@ -536,7 +536,7 @@ async fn exercise_real_executor(stream_output: bool, lost_receipt: bool, negativ
             RunnerOptions {
                 client: runner_client,
                 registration,
-                journal: Arc::new(FileJournal::open(dir.path().join("private")).unwrap()),
+                journal: Arc::new(FileJournal::open(private_journal_path(&dir)).unwrap()),
                 tools: BTreeMap::from([(
                     "BusinessLookup".into(),
                     Tool::new(
@@ -616,7 +616,7 @@ async fn exercise_real_executor(stream_output: bool, lost_receipt: bool, negativ
             if negative==3 {f.send_control(&json!({"command":"set-auth","requestId":"rust-executor-revoke-auth","allowed":false})).await;}
             assert!(runner.execute(op,CancellationToken::new()).await.is_err());
             assert_eq!(executions.load(Ordering::SeqCst),0,"revoked or other principal must not enter the handler");
-            assert_eq!(std::fs::read_dir(dir.path().join("private")).unwrap().count(),0,"remote authority must be checked before claim");
+            assert_eq!(std::fs::read_dir(private_journal_path(&dir)).unwrap().count(),0,"remote authority must be checked before claim");
             observer.abort();let _=observer.await;
             return;
         }
@@ -705,6 +705,11 @@ async fn exercise_real_executor(stream_output: bool, lost_receipt: bool, negativ
     .await
     .expect("executor real Serve test timed out");
     f.stop().await;
+}
+
+fn private_journal_path(dir: &tempfile::TempDir) -> std::path::PathBuf {
+    // Canonicalize only our newly created temporary root, not a journal input.
+    dir.path().canonicalize().unwrap().join("private")
 }
 
 fn output_query(operation: &Operation) -> CallOptions {

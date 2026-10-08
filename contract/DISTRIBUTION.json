@@ -1,0 +1,7 @@
+{
+  "format": "tansr-rust-contract-distribution-v1",
+  "scope": "public",
+  "contractFileCount": 20,
+  "sourceLockFileCount": 39,
+  "sourceLockSha256": "f851aa0cee6d18c4b162cbd12f58e4f197debcfa2d9ac5decf62b2add35968cc"
+}

@@ -1,0 +1,50 @@
+name: Rust mainline checks
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install the repository toolchain
+        shell: bash
+        run: rustup show active-toolchain
+      - name: Install Windows TLS build prerequisite
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install nasm --yes --no-progress
+          if ($LASTEXITCODE -ne 0) { throw 'NASM installation failed' }
+          $nasmDirectory = Join-Path $env:ProgramFiles 'NASM'
+          if (-not (Test-Path (Join-Path $nasmDirectory 'nasm.exe'))) { throw 'NASM executable is missing' }
+          $nasmDirectory | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      - name: Formatting
+        run: cargo fmt --all --check
+      - name: Explicit contract distribution (internal 39 or public 20)
+        run: cargo run -p xtask --locked -- contract-check --distribution
+      - name: Generated operations
+        run: cargo run -p xtask --locked -- generate --check
+      - name: Check
+        run: cargo check --workspace --all-targets --locked
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+      - name: Unit and controlled protocol tests
+        run: cargo test --workspace --all-features --locked
+      - name: Documentation examples
+        run: cargo test --doc --workspace --all-features --locked
+      - name: Documentation
+        run: cargo doc --workspace --no-deps --all-features --locked
+
+  # Real Serve, standard-user/ACL experiments and registry consumption are
+  # separate evidence. No publish job or release credentials are configured.

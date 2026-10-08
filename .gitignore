@@ -1,0 +1,4 @@
+/target/
+/.review-tmp/
+/.env
+*.log

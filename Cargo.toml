@@ -1,0 +1,55 @@
+[package]
+name = "tansr-sdk"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "Native Rust client for Tansr Serve unified API"
+readme = "README.md"
+license = "MIT"
+repository = "https://github.com/tansrai/tansr-rust"
+documentation = "https://docs.rs/tansr-sdk/0.1.0/tansr_sdk/"
+keywords = ["tansr", "sdk", "async", "sse", "agent"]
+categories = ["api-bindings", "asynchronous"]
+publish = ["crates-io"]
+include = ["src/**", "contract/*.json", "/LICENSE", "/README.md", "/README.en.md", "doc/使用指南.md", "doc/guide.md", "/Cargo.toml", "/Cargo.lock"]
+
+[workspace]
+members = ["demo", "xtask"]
+resolver = "3"
+
+[dependencies]
+async-stream = "0.3"
+async-trait = "0.1"
+base64 = "0.22"
+bytes = "1"
+futures-core = "0.3"
+futures-util = "0.3"
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "stream", "json"] }
+serde = { version = "1", features = ["derive"] }
+# The validated lexer uses Number::from_string_unchecked to retain -0 and
+# exponent lexemes. It is doc(hidden): upgrade only with the byte-vector gates.
+serde_json = { version = "=1.0.151", features = ["arbitrary_precision", "raw_value"] }
+sha2 = "0.10"
+thiserror = "2"
+tokio = { version = "1", features = ["sync", "time", "rt", "macros", "fs", "io-util"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+time = { version = "0.3", features = ["formatting", "parsing"] }
+aes-gcm = "0.10"
+fs2 = "0.4"
+rand = "0.8"
+zeroize = "1"
+regex = "1"
+httpdate = "1"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = ["Win32_Foundation", "Win32_Storage_FileSystem", "Win32_Security", "Win32_Security_Authorization", "Win32_System_Threading", "Win32_System_Memory"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "process", "test-util"] }
+tempfile = "3"
+rcgen = "0.13"
+rustls = "0.23"
+tokio-rustls = "0.26"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"

@@ -1,0 +1,3 @@
+* text=auto eol=lf
+# These bytes are locked against the original source Git objects.
+contract/** -text

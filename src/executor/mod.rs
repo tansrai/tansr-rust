@@ -1,4 +1,4 @@
-//! Explicit business tools running on the client, never on the Serve host.
+//! Explicit client-side business handlers and reserved storage profiles.
 //! A host authorization callback and a durable journal are mandatory.
 mod client;
 mod journal;

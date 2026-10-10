@@ -369,6 +369,10 @@ async fn no_permission_execution(harness: &PermissionHarness) {
     assert_eq!(
         std::fs::read_dir(private_journal_path(&harness._journal))
             .unwrap()
+            .filter(|entry| entry.as_ref().map_or(true, |entry| matches!(
+                entry.path().extension().and_then(|v| v.to_str()),
+                Some("claim" | "receipt")
+            )))
             .count(),
         0,
         "invalid permission must not create a durable execution claim"
@@ -616,7 +620,7 @@ async fn exercise_real_executor(stream_output: bool, lost_receipt: bool, negativ
             if negative==3 {f.send_control(&json!({"command":"set-auth","requestId":"rust-executor-revoke-auth","allowed":false})).await;}
             assert!(runner.execute(op,CancellationToken::new()).await.is_err());
             assert_eq!(executions.load(Ordering::SeqCst),0,"revoked or other principal must not enter the handler");
-            assert_eq!(std::fs::read_dir(private_journal_path(&dir)).unwrap().count(),0,"remote authority must be checked before claim");
+            assert_eq!(std::fs::read_dir(private_journal_path(&dir)).unwrap().filter(|entry| entry.as_ref().map_or(true, |entry| matches!(entry.path().extension().and_then(|v| v.to_str()), Some("claim" | "receipt")))).count(),0,"remote authority must be checked before claim");
             observer.abort();let _=observer.await;
             return;
         }

@@ -466,6 +466,10 @@ fn requiring_business_output_rejects_before_register_claim_or_handler() {
     assert_eq!(
         std::fs::read_dir(private_journal_path(&dir))
             .unwrap()
+            .filter(|entry| entry.as_ref().map_or(true, |entry| matches!(
+                entry.path().extension().and_then(|v| v.to_str()),
+                Some("claim" | "receipt")
+            )))
             .count(),
         0
     );
@@ -621,6 +625,10 @@ async fn forged_remote_status_and_denied_credentials_cannot_create_claims() {
         assert_eq!(
             std::fs::read_dir(private_journal_path(&dir))
                 .unwrap()
+                .filter(|entry| entry.as_ref().map_or(true, |entry| matches!(
+                    entry.path().extension().and_then(|v| v.to_str()),
+                    Some("claim" | "receipt")
+                )))
                 .count(),
             0
         );
@@ -678,6 +686,10 @@ async fn restricted_status_denial_has_no_controller_fallback_and_zero_handler() 
     assert_eq!(
         std::fs::read_dir(private_journal_path(&dir))
             .unwrap()
+            .filter(|entry| entry.as_ref().map_or(true, |entry| matches!(
+                entry.path().extension().and_then(|v| v.to_str()),
+                Some("claim" | "receipt")
+            )))
             .count(),
         0
     );
@@ -1011,7 +1023,16 @@ async fn renamed_journal_directory_cannot_redirect_claims_or_receipts() {
     };
     assert!(journal.complete(&operation, &receipt).await.is_err());
     assert_eq!(std::fs::read_dir(&original).unwrap().count(), 0);
-    assert_eq!(std::fs::read_dir(&moved).unwrap().count(), 1);
+    assert_eq!(
+        std::fs::read_dir(&moved)
+            .unwrap()
+            .filter(|entry| entry.as_ref().map_or(true, |entry| entry
+                .path()
+                .extension()
+                .is_some_and(|v| v == "claim")))
+            .count(),
+        1
+    );
 }
 
 #[test]
@@ -1061,4 +1082,388 @@ async fn subprocess_claim_survives_abrupt_exit_without_reexecution() {
         "unknown"
     );
     assert_eq!(calls.load(Ordering::SeqCst), 0);
+}
+
+#[tokio::test]
+async fn publication_profile_uses_original_operation_and_encrypted_journal() {
+    use sha2::Digest;
+    use tansr_sdk::memory_publication as mp;
+    let dir = tempfile::tempdir().unwrap();
+    let root = private_journal_path(&dir);
+    tansr_sdk::archive::create_private_directory(&root).unwrap();
+    let original = operation();
+    let current = mp::Owner::from_operation(&original);
+    let store = Arc::new(
+        mp::FileStore::open(mp::StoreOptions {
+            path: root.join("publication"),
+            mode: mp::OpenMode::Create,
+            key: [7; 32],
+            identity: mp::Identity {
+                application_scope_id: "app".into(),
+                end_user_id: "user".into(),
+                source_id: "source".into(),
+                source_generation: "1".into(),
+                domain_key: "domain".into(),
+            },
+            limits: mp::Limits::default(),
+            read_context: Arc::new(move || Ok(current.clone())),
+            authorize_recovery: None,
+        })
+        .await
+        .unwrap(),
+    );
+    let host = mp::Host::new(store.clone(), auth()).unwrap().into_tool();
+    let remote = Remote::new();
+    let mut registration = registration();
+    registration.tools = vec![ToolDefinition {
+        name: mp::TOOL_NAME.into(),
+        definition_digest: mp::TOOL_DIGEST.into(),
+    }];
+    let build = |journal: Arc<dyn Journal>| {
+        Runner::with_connection(
+            RunnerOptions {
+                client: Client::new(remote.api.clone(), scope()).unwrap(),
+                registration: registration.clone(),
+                journal,
+                tools: BTreeMap::from([(mp::TOOL_NAME.into(), host.clone())]),
+                authorize: auth(),
+                poll_interval: Duration::from_millis(10),
+                terminal: None,
+                require_output: false,
+                restricted_status: false,
+            },
+            connection(),
+        )
+    };
+    assert!(build(Arc::new(FileJournal::open(root.join("plaintext")).unwrap())).is_err());
+    let journal = Arc::new(FileJournal::open_encrypted(root.join("encrypted"), [8; 32]).unwrap());
+    let runner = build(journal.clone()).unwrap();
+    let body = "secret publication body";
+    let digest = format!("{:x}", sha2::Sha256::digest(body.as_bytes()));
+    let requests = [
+        json!({"action":"begin","transferId":"t","expectedEtag":null,"byteLength":body.len(),"sha256":digest}),
+        json!({"action":"chunk","transferId":"t","offset":0,"byteLength":body.len(),"base64":base64::Engine::encode(&base64::engine::general_purpose::STANDARD,body),"payloadDigest":digest}),
+        json!({"action":"commit","transferId":"t"}),
+        json!({"action":"read","etag":digest,"offset":0,"length":12288}),
+    ];
+    for (i, mut request) in requests.into_iter().enumerate() {
+        request["contract"] = json!(mp::CONTRACT);
+        request["sourceId"] = json!("source");
+        request["sourceGeneration"] = json!("1");
+        request["domainKey"] = json!("domain");
+        let mut op = original.clone();
+        op.operation_id = format!("publication-{i}");
+        op.tool_name = "MemoryPublication".into();
+        op.request.args = json!({"name":mp::TOOL_NAME,"definitionDigest":mp::TOOL_DIGEST,"argsJson":request.to_string()});
+        op.digest = operation_digest(&op).unwrap();
+        remote.state.lock().unwrap().operation = Some(op.clone());
+        let receipt = runner
+            .execute(op.clone(), CancellationToken::new())
+            .await
+            .unwrap();
+        assert_eq!(receipt.status, "completed");
+        let result: Value = serde_json::from_str(
+            receipt.result.as_ref().unwrap().args["resultJson"]
+                .as_str()
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(result["status"], "ok");
+        assert_eq!(
+            runner.execute(op, CancellationToken::new()).await.unwrap(),
+            receipt
+        );
+    }
+    for entry in std::fs::read_dir(root.join("encrypted")).unwrap() {
+        let bytes = std::fs::read(entry.unwrap().path()).unwrap();
+        assert!(!String::from_utf8_lossy(&bytes).contains(body));
+        assert!(!String::from_utf8_lossy(&bytes).contains("publication-3"));
+    }
+    let mut forged = original;
+    forged.tool_name = "MemoryPublication".into();
+    forged.digest = operation_digest(&forged).unwrap();
+    assert!(
+        runner
+            .execute(forged, CancellationToken::new())
+            .await
+            .is_err()
+    );
+    store.close().await.unwrap();
+}
+
+#[tokio::test]
+async fn encrypted_journal_reopen_wrong_key_corruption_and_plaintext_refusal() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = private_journal_path(&dir);
+    let op = operation();
+    let journal = FileJournal::open_encrypted(&path, [8; 32]).unwrap();
+    assert!(journal.encrypted_at_rest());
+    assert!(matches!(
+        journal.claim(&op).await.unwrap(),
+        ClaimResult::Claimed
+    ));
+    drop(journal);
+    assert!(FileJournal::open_encrypted(&path, [9; 32]).is_err());
+    assert!(FileJournal::open(&path).is_err());
+    let journal = FileJournal::open_encrypted(&path, [8; 32]).unwrap();
+    assert!(matches!(
+        journal.claim(&op).await.unwrap(),
+        ClaimResult::Pending
+    ));
+    let receipt = Receipt {
+        protocol: PROTOCOL.into(),
+        executor_id: "device".into(),
+        connection_id: "connection".into(),
+        operation_id: op.operation_id.clone(),
+        digest: op.digest.clone(),
+        status: "completed".into(),
+        result: Some(Resource {
+            operation: "tool.invoke".into(),
+            args: json!({"resultJson":json!({"status":"ok","content":[{"t":"text","text":"private-result-body"}]}).to_string()}),
+        }),
+        error_code: None,
+    };
+    journal.complete(&op, &receipt).await.unwrap();
+    drop(journal);
+    let journal = FileJournal::open_encrypted(&path, [8; 32]).unwrap();
+    assert!(matches!(journal.claim(&op).await.unwrap(),ClaimResult::Receipt(r) if *r==receipt));
+    let file = std::fs::read_dir(&path)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .find(|p| p.extension().is_some_and(|x| x == "receipt"))
+        .unwrap();
+    let mut bytes = std::fs::read(&file).unwrap();
+    assert!(!String::from_utf8_lossy(&bytes).contains("private-result-body"));
+    bytes[0] ^= 1;
+    std::fs::write(&file, &bytes).unwrap();
+    assert!(journal.claim(&op).await.is_err());
+    assert_eq!(std::fs::read(&file).unwrap(), bytes);
+    let dir = tempfile::tempdir().unwrap();
+    let path = private_journal_path(&dir);
+    let plain = FileJournal::open(&path).unwrap();
+    assert!(FileJournal::open_encrypted(&path, [8; 32]).is_err());
+    assert!(!plain.encrypted_at_rest());
+}
+
+fn journal_bytes(path: &std::path::Path) -> BTreeMap<String, Vec<u8>> {
+    std::fs::read_dir(path)
+        .unwrap()
+        .map(|entry| {
+            let entry = entry.unwrap();
+            (
+                entry.file_name().into_string().unwrap(),
+                std::fs::read(entry.path()).unwrap(),
+            )
+        })
+        .collect()
+}
+fn journal_fact_key(op: &Operation) -> String {
+    use sha2::Digest;
+    format!(
+        "{:x}",
+        sha2::Sha256::digest(
+            tansr_sdk::canonical::encode(&json!([
+                op.scope.application_scope_id,
+                op.scope.end_user_id,
+                op.binding.target.executor_id,
+                op.operation_id
+            ]))
+            .unwrap()
+        )
+    )
+}
+
+#[tokio::test]
+async fn journal_copy_preserves_all_original_receipts_pending_unknown_and_fences() {
+    for encrypted in [false, true] {
+        let dir = tempfile::tempdir().unwrap();
+        let root = private_journal_path(&dir);
+        tansr_sdk::archive::create_private_directory(&root).unwrap();
+        let source = root.join("source");
+        let journal = if encrypted {
+            FileJournal::open_encrypted(&source, [8; 32]).unwrap()
+        } else {
+            FileJournal::open(&source).unwrap()
+        };
+        let mut operations = Vec::new();
+        let mut receipts = Vec::new();
+        for (i, status) in [
+            "completed",
+            "unknown",
+            "pending",
+            "bad-claim",
+            "bad-receipt",
+            "orphan",
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let mut op = operation();
+            op.operation_id = format!("private-copy-operation-{i}");
+            op.digest = operation_digest(&op).unwrap();
+            assert!(matches!(
+                journal.claim(&op).await.unwrap(),
+                ClaimResult::Claimed
+            ));
+            let receipt = Receipt {
+                protocol: PROTOCOL.into(),
+                executor_id: "device".into(),
+                connection_id: "connection".into(),
+                operation_id: op.operation_id.clone(),
+                digest: op.digest.clone(),
+                status: if status == "unknown" {
+                    "unknown"
+                } else {
+                    "completed"
+                }
+                .into(),
+                result: if status == "unknown" {
+                    None
+                } else {
+                    Some(Resource {
+                        operation: "tool.invoke".into(),
+                        args: json!({"resultJson":json!({"status":"ok","content":[{"t":"text","text":"private-copy-sensitive-read-result"}]}).to_string()}),
+                    })
+                },
+                error_code: if status == "unknown" {
+                    Some("execution_outcome_unknown".into())
+                } else {
+                    None
+                },
+            };
+            if status != "pending" {
+                journal.complete(&op, &receipt).await.unwrap();
+            }
+            let key = journal_fact_key(&op);
+            match status {
+                "bad-claim" => std::fs::write(
+                    source.join(format!("{key}.claim")),
+                    b"partial-private-claim",
+                )
+                .unwrap(),
+                "bad-receipt" => std::fs::write(
+                    source.join(format!("{key}.receipt")),
+                    b"partial-private-receipt",
+                )
+                .unwrap(),
+                "orphan" => std::fs::remove_file(source.join(format!("{key}.claim"))).unwrap(),
+                _ => {}
+            }
+            operations.push(op);
+            receipts.push(receipt);
+        }
+        let before = journal_bytes(&source);
+        let target = root.join("target");
+        if encrypted {
+            assert!(journal.copy_to(&target, [8; 32]).is_err());
+            assert!(!target.exists());
+        }
+        let copied = journal.copy_to(&target, [9; 32]).unwrap();
+        assert!(copied.encrypted_at_rest());
+        assert_eq!(before, journal_bytes(&source));
+        assert!(journal.copy_to(&target, [10; 32]).is_err());
+        assert!(FileJournal::open(&target).is_err());
+        assert!(FileJournal::open_encrypted(&target, [8; 32]).is_err());
+        drop(copied);
+        let copied = FileJournal::open_encrypted(&target, [9; 32]).unwrap();
+        let rotated = copied.copy_to(root.join("rotated"), [10; 32]).unwrap();
+        for store in [&journal, &copied, &rotated] {
+            for (i, op) in operations.iter().enumerate() {
+                match i {
+                    0 | 1 => assert!(
+                        matches!(store.claim(op).await.unwrap(), ClaimResult::Receipt(r) if *r == receipts[i])
+                    ),
+                    2 => assert!(matches!(
+                        store.claim(op).await.unwrap(),
+                        ClaimResult::Pending
+                    )),
+                    _ => assert!(store.claim(op).await.is_err()),
+                }
+            }
+            let mut changed = operations[0].clone();
+            changed.scope.authorization_revision = "2".into();
+            changed.binding.target.connection_revision = "2".into();
+            changed.digest = operation_digest(&changed).unwrap();
+            assert!(store.claim(&changed).await.is_err());
+        }
+        assert_eq!(before, journal_bytes(&source));
+        for path in [&target, &root.join("rotated")] {
+            for bytes in journal_bytes(path).values() {
+                let text = String::from_utf8_lossy(bytes);
+                assert!(!text.contains("private-copy"));
+                assert!(!text.contains("partial-private"));
+            }
+        }
+        let fact_names = |path: &std::path::Path| {
+            journal_bytes(path)
+                .into_keys()
+                .filter(|name| name.ends_with(".claim") || name.ends_with(".receipt"))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(fact_names(&source), fact_names(&target));
+    }
+}
+
+#[test]
+fn encrypted_journal_reopen_never_initializes_missing_original_media() {
+    let temp = tempfile::tempdir().unwrap();
+    let root = std::fs::canonicalize(temp.path())
+        .unwrap()
+        .join("original-journal");
+    assert!(FileJournal::reopen_encrypted(&root, [41; 32]).is_err());
+    assert!(!root.exists());
+    let original = FileJournal::open_encrypted(&root, [41; 32]).unwrap();
+    drop(original);
+    assert!(FileJournal::reopen_encrypted(&root, [42; 32]).is_err());
+    drop(FileJournal::reopen_encrypted(&root, [41; 32]).unwrap());
+    std::fs::remove_file(root.join("journal.encryption")).unwrap();
+    let before: Vec<_> = std::fs::read_dir(&root)
+        .unwrap()
+        .map(|p| p.unwrap().file_name())
+        .collect();
+    assert!(FileJournal::reopen_encrypted(&root, [41; 32]).is_err());
+    let after: Vec<_> = std::fs::read_dir(&root)
+        .unwrap()
+        .map(|p| p.unwrap().file_name())
+        .collect();
+    assert_eq!(before, after);
+    assert!(!root.join("journal.encryption").exists());
+}
+
+#[tokio::test]
+async fn encrypted_journal_rejects_truncated_or_foreign_aad_without_rewriting() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = private_journal_path(&dir);
+    let op = operation();
+    let journal = FileJournal::open_encrypted(&path, [8; 32]).unwrap();
+    assert!(matches!(
+        journal.claim(&op).await.unwrap(),
+        ClaimResult::Claimed
+    ));
+    let receipt = Receipt {
+        protocol: PROTOCOL.into(),
+        executor_id: "device".into(),
+        connection_id: "connection".into(),
+        operation_id: op.operation_id.clone(),
+        digest: op.digest.clone(),
+        status: "unknown".into(),
+        result: None,
+        error_code: Some("execution_outcome_unknown".into()),
+    };
+    journal.complete(&op, &receipt).await.unwrap();
+    let key = journal_fact_key(&op);
+    let file = path.join(format!("{key}.receipt"));
+    let original = std::fs::read(&file).unwrap();
+    let foreign = std::fs::read(path.join(format!("{key}.claim"))).unwrap();
+    for bad in [
+        original[..original.len() - 7].to_vec(),
+        foreign,
+        b"untrusted-sensitive-plaintext".to_vec(),
+    ] {
+        std::fs::write(&file, &bad).unwrap();
+        assert!(journal.claim(&op).await.is_err());
+        assert_eq!(std::fs::read(&file).unwrap(), bad);
+    }
+    std::fs::write(&file, &original).unwrap();
+    assert!(matches!(journal.claim(&op).await.unwrap(), ClaimResult::Receipt(r) if *r == receipt));
 }

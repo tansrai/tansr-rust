@@ -31,9 +31,14 @@ impl Serve {
         Self::start_in(mode, tempfile::tempdir().expect("test directory")).await
     }
     async fn start_in(mode: &str, directory: tempfile::TempDir) -> Self {
-        let fixture = PathBuf::from(std::env::var("TANSR_RUST_SERVE_FIXTURE").expect(
-            "required: TANSR_RUST_SERVE_FIXTURE must point to the verified private Serve fixture",
-        ));
+        let variable = if mode == "publication" {
+            "TANSR_RUST_PUBLICATION_FIXTURE"
+        } else {
+            "TANSR_RUST_SERVE_FIXTURE"
+        };
+        let fixture = PathBuf::from(std::env::var(variable).unwrap_or_else(|_| {
+            panic!("required: {variable} must point to the verified private Serve fixture")
+        }));
         assert!(fixture.is_file(), "required Serve fixture is unavailable");
         let fixture = node_path(fixture);
         let physical = std::fs::canonicalize(directory.path()).expect("physical test directory");

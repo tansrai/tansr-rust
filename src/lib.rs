@@ -51,7 +51,10 @@
 //!   provide exactly requested materials. The host owns storage and keys;
 //!   Serve still composes context. Local archives do not implement a separate
 //!   memory coordinator or promise cross-language file-format compatibility.
-//! - [`api`]: generated operations, capability fencing, HTTP/SSE and unified
+//! - [memory_publication]: encrypted publication storage and a reserved host
+//!   profile using the original executor. Its execution journal must also be
+//!   encrypted; Serve retains all memory business decisions.
+//! - [pi]: generated operations, capability fencing, HTTP/SSE and unified
 //!   errors. [`canonical`] and [`sse`] expose the strict wire primitives.
 //!
 //! Preserve original request identities, preconditions and deadlines after an
@@ -79,7 +82,10 @@ pub mod api;
 pub mod archive;
 pub mod canonical;
 pub mod executor;
+pub mod memory_publication;
 pub mod session;
 pub mod sse;
+mod storage_cipher;
+pub mod terminal_persistence;
 pub use api::{ApiClient, CallOptions, ClientBuilder, Error, Result};
 pub use tokio_util::sync::CancellationToken;

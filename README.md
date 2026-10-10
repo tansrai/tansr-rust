@@ -63,6 +63,8 @@ SSE 不自动重连；宿主须保留已处理水位并显式恢复。Ctrl+C、�
 
 未承诺任意 shell/PTY、OS 文件沙箱或密钥库、GUI/Tauri/WASM、完整本地记忆发布、多副本/跨设备同步、备份/保留策略、高级缓存编排或 Go/Node 介质互读。Electron 继续使用原集成 SDK/IPC 模式。
 
+PST-05 本地开发候选另提供加密 `memory_publication` 与执行 journal、显式保源轮钥、严格 reopen 及原 operationId 恢复 Demo。Windows 专用 Serve 实链已有独立证据，原 Archive 验收不代签；未发布到 0.1.0，Linux/macOS 与新发行仍待验。见[专用介质指南](doc/使用指南.md#pst-05端侧专用记忆介质本地开发候选)。
+
 ## 开发与验收
 
 ```sh
@@ -85,3 +87,5 @@ cargo doc --workspace --no-deps --all-features --locked
 MIT 覆盖本次授权的 Rust SDK、Demo、使用指南及 SDK 包内 20 份合同 JSON。`contract/LOCK.json` 与 `contract/PROVENANCE.json` 保留来源记录；锁记录全部 39 份冻结资产，不表示公开包包含全部文件。合同原字节和 SHA256 保持不变。
 
 Serve/kernel 实现继续私有且独立部署。内部核验使用的 `contract/reference/`、`contract/sdk2-archive-recovery-v1.sqlite.sql`、私有 Serve bundle、凭据和验收日志不属于公开发行内容，根 MIT 许可不扩展到这些排除材料。公开仓从授权文件白名单生成独立快照，不能携带原内部仓的 Git 历史或私有 refs。
+
+显式安装的新 `terminal_persistence` 模块提供 TansrTerminalPersistenceV1：不透明块/双键索引、加密共同根与原键永久结果。真实 Host 例子为 `terminal_persistence`，具体配额、整元数据重写及恢复边界见[指南](doc/使用指南.md#terminal-persistence-v1pst-05显式启用)。旧 publication 与 Archive 保持独立。新 V1 `FileStore::copy_to` 与该例子的 `--copy-to/--copy-key-file` 提供离线保源复制和换钥；完整目标持久只读，cutover pending，普通 reopen 不激活，不包含独立 execution journal。

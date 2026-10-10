@@ -188,7 +188,12 @@ pub fn archive_key() -> Result<[u8; 32]> {
     let path = std::env::var_os("TANSR_ARCHIVE_KEY_FILE").ok_or_else(|| {
         Error::InvalidInput("set TANSR_ARCHIVE_KEY_FILE to a 64-digit hex key file".into())
     })?;
-    let bytes = read_bounded(Path::new(&path), 128)?;
+    archive_key_from_file(Path::new(&path))
+}
+
+/// Read an explicitly selected host key file, without changing process environment.
+pub fn archive_key_from_file(path: &Path) -> Result<[u8; 32]> {
+    let bytes = read_bounded(path, 128)?;
     let hex = std::str::from_utf8(&bytes)
         .map_err(|_| Error::InvalidInput("invalid archive key file".into()))?
         .trim_end_matches(['\r', '\n']);

@@ -71,6 +71,17 @@ fn schema(family: &str) -> Result<&'static Schema> {
         "unified-v1" => frozen!("unified-v1.schema.json"),
         "sdk2-ext-v1" => frozen!("sdk2-ext-v1.schema.json"),
         "terminal-services-v1" => frozen!("terminal-services-v1.schema.json"),
+        "terminal-persistence-v1" => {
+            static SCHEMA: OnceLock<std::result::Result<Schema, String>> = OnceLock::new();
+            SCHEMA
+                .get_or_init(|| {
+                    Schema::load(include_str!(
+                        "../terminal_persistence/assets/terminal-persistence-v1.schema.json"
+                    ))
+                })
+                .as_ref()
+                .map_err(|reason| Error::Contract(reason.clone()))
+        }
         "sdk2-archive-recovery-v1" => frozen!("sdk2-archive-recovery-v1.schema.json"),
         "archive-sync-v1" => frozen!("archive-sync-v1.schema.json"),
         "sdk2-cache-v1" => frozen!("sdk2-cache-v1.schema.json"),

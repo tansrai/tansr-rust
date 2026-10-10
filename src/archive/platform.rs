@@ -131,6 +131,22 @@ pub fn create_private_directory(path: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Exclusively create a migration staging directory under a private parent.
+pub(crate) fn create_private_directory_new(path: &Path) -> Result<()> {
+    let parent = verify_parent(path)?;
+    imp::create_directory(path)?;
+    verify_parent_identity(&parent, path)?;
+    imp::private_directory(path)?;
+    Ok(())
+}
+/// Publish a complete staged directory without replacing any existing target.
+/// The staging directory and all of its handles must be closed first.
+pub(crate) fn publish_directory_at(parent: &File, source: &Path, target: &Path) -> Result<()> {
+    verify_parent_identity(parent, source)?;
+    verify_parent_identity(parent, target)?;
+    imp::publish_directory_at(parent, source, target)
+}
+
 #[cfg(unix)]
 mod imp {
     use super::*;
@@ -238,6 +254,72 @@ mod imp {
             return Err(std::io::Error::last_os_error().into());
         }
         directory.sync_all()?;
+        Ok(())
+    }
+    pub fn publish_directory_at(parent: &File, source: &Path, target: &Path) -> Result<()> {
+        use std::os::fd::AsRawFd;
+        #[cfg(target_os = "linux")]
+        #[link(name = "dl")]
+        unsafe extern "C" {
+            fn dlsym(
+                handle: *mut core::ffi::c_void,
+                name: *const core::ffi::c_char,
+            ) -> *mut core::ffi::c_void;
+        }
+        #[cfg(target_os = "macos")]
+        unsafe extern "C" {
+            fn renameatx_np(
+                fromdir: i32,
+                from: *const core::ffi::c_char,
+                todir: i32,
+                to: *const core::ffi::c_char,
+                flags: u32,
+            ) -> i32;
+        }
+        let from = leaf(source)?;
+        let to = leaf(target)?;
+        // SAFETY: live directory descriptor, single NUL-terminated filenames.
+        // NOREPLACE/EXCL must be supported; there is no clobbering fallback.
+        #[cfg(target_os = "linux")]
+        let status = unsafe {
+            // Resolve at runtime so this optional migration API does not raise
+            // the loader's glibc baseline for existing SDK consumers.
+            type Rename = unsafe extern "C" fn(
+                i32,
+                *const core::ffi::c_char,
+                i32,
+                *const core::ffi::c_char,
+                u32,
+            ) -> i32;
+            let symbol = dlsym(std::ptr::null_mut(), c"renameat2".as_ptr());
+            if symbol.is_null() {
+                return Err(Error::Io(
+                    "atomic no-replace directory publication unavailable".into(),
+                ));
+            }
+            let rename: Rename = std::mem::transmute(symbol);
+            rename(
+                parent.as_raw_fd(),
+                from.as_ptr(),
+                parent.as_raw_fd(),
+                to.as_ptr(),
+                1,
+            )
+        };
+        #[cfg(target_os = "macos")]
+        let status = unsafe {
+            renameatx_np(
+                parent.as_raw_fd(),
+                from.as_ptr(),
+                parent.as_raw_fd(),
+                to.as_ptr(),
+                4,
+            )
+        };
+        if status != 0 {
+            return Err(std::io::Error::last_os_error().into());
+        }
+        parent.sync_all()?;
         Ok(())
     }
     pub fn remove_at(directory: &File, path: &Path) -> Result<()> {
@@ -504,6 +586,20 @@ mod imp {
                 bInheritHandle: 0,
             };
             if CreateDirectoryW(wide(path).as_ptr(), &sa) == 0 {
+                return Err(failure());
+            }
+        }
+        Ok(())
+    }
+    pub fn publish_directory_at(_parent: &File, source: &Path, target: &Path) -> Result<()> {
+        // No MOVEFILE_REPLACE_EXISTING: even an empty target is never replaced.
+        unsafe {
+            if MoveFileExW(
+                wide(source).as_ptr(),
+                wide(target).as_ptr(),
+                MOVEFILE_WRITE_THROUGH,
+            ) == 0
+            {
                 return Err(failure());
             }
         }

@@ -63,6 +63,8 @@ SSE does not reconnect automatically; the host retains its processed cursor and 
 
 Arbitrary shell/PTY execution, an OS filesystem sandbox/key vault, GUI/Tauri/WASM, complete local memory publication, replicas/cross-device sync, retention/backup policy, advanced cache orchestration, and Go/Node storage-format interoperability are outside this initial high-level scope. Electron keeps its existing integrated SDK/IPC mode.
 
+The local PST-05 candidate adds encrypted `memory_publication` and execution journals, explicit source-preserving rotation, strict reopen, and original-operation recovery in the Demo. Dedicated Windows Serve evidence is separate from Archive acceptance. This is not part of published 0.1.0; Linux/macOS and a new release remain pending. See the [dedicated storage guide](doc/guide.md#pst-05-dedicated-terminal-memory-storage-local-candidate).
+
 ## Development
 
 ```sh
@@ -85,3 +87,10 @@ Both packages are published in the [v0.1.0 release](https://github.com/tansrai/t
 MIT covers the authorized Rust SDK, Demo, guides and the 20 contract JSON files shipped in the SDK package. `contract/LOCK.json` and `contract/PROVENANCE.json` preserve provenance. The lock lists all 39 frozen assets; it does not claim that all of them are distributed publicly. Original contract bytes and SHA256 values remain unchanged.
 
 Serve/kernel remains private and is deployed independently. Internal verification materials under `contract/reference/`, `contract/sdk2-archive-recovery-v1.sqlite.sql`, private Serve bundles, credentials and acceptance logs are excluded from public distribution; the root MIT license does not relicense those excluded materials. The public repository is an allowlisted source snapshot with independent Git history, without the internal repository's history or private refs.
+
+The explicitly installed `terminal_persistence` module provides the approved
+TansrTerminalPersistenceV1 opaque block/index profile with an encrypted root and
+permanent original-key results. Use the `terminal_persistence` Demo example and
+[storage guide](doc/guide.md#terminal-persistence-v1-pst-05-explicit-opt-in).
+Its lower file-layout quotas and whole-metadata rewrite costs are explicit;
+legacy publication and Archive remain separate.

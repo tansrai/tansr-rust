@@ -109,7 +109,32 @@ impl Runner {
             || options.tools.len() != options.registration.tools.len()
             || options.registration.interpreter.is_some()
         {
-            return Err(invalid("runner supports explicit business tools only"));
+            return Err(invalid(
+                "runner supports explicit tool.invoke handlers only",
+            ));
+        }
+        for (name, tool) in &options.tools {
+            if name == "MemoryPublication" {
+                return Err(invalid("publication is not a business tool"));
+            }
+            if name == crate::terminal_persistence::TOOL_NAME
+                && (tool.definition_digest != crate::terminal_persistence::TOOL_DIGEST
+                    || !tool.handler.is_terminal_persistence_host()
+                    || !options.journal.encrypted_at_rest())
+            {
+                return Err(invalid(
+                    "persistence requires dedicated host and encrypted execution journal",
+                ));
+            }
+            if name == crate::memory_publication::TOOL_NAME
+                && (tool.definition_digest != crate::memory_publication::TOOL_DIGEST
+                    || !tool.handler.is_memory_publication_host()
+                    || !options.journal.encrypted_at_rest())
+            {
+                return Err(invalid(
+                    "publication requires dedicated host and encrypted execution journal",
+                ));
+            }
         }
         for t in &options.registration.tools {
             if options
@@ -325,7 +350,11 @@ impl Runner {
         let tool = self
             .options
             .tools
-            .get(&op.tool_name)
+            .get(
+                op.request.args["name"]
+                    .as_str()
+                    .ok_or_else(|| invalid("tool name"))?,
+            )
             .ok_or_else(|| invalid("tool not installed"))?;
         if op.request.args["definitionDigest"] != tool.definition_digest {
             return Err(invalid("tool definition substituted"));
@@ -548,7 +577,7 @@ impl Runner {
         // Cancellation, lost ACK or panic during sealing cannot erase that fact.
         let fact = std::sync::Mutex::new(None);
         let work = async {
-            let result = tool.handler.invoke(ctx.clone(), args).await;
+            let result = tool.handler.invoke_operation(ctx.clone(), op, args).await;
             *fact.lock().expect("business result lock") = Some(result);
             if let Some(w) = &ctx.output {
                 return Some(match w.finish().await {

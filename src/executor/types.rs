@@ -186,6 +186,23 @@ pub enum ToolError {
 }
 #[async_trait]
 pub trait ToolHandler: Send + Sync {
+    /// Reserved storage profiles require the original execution envelope.
+    fn is_memory_publication_host(&self) -> bool {
+        false
+    }
+    /// Explicit opt-in for the v1 storage profile, independent of legacy storage.
+    fn is_terminal_persistence_host(&self) -> bool {
+        false
+    }
+    /// Additive dispatch hook; existing business handlers retain invoke behavior.
+    async fn invoke_operation(
+        &self,
+        context: ToolContext,
+        _operation: &Operation,
+        args: Value,
+    ) -> std::result::Result<Value, ToolError> {
+        self.invoke(context, args).await
+    }
     async fn invoke(
         &self,
         context: ToolContext,
@@ -216,6 +233,10 @@ pub enum ClaimResult {
 }
 #[async_trait]
 pub trait Journal: Send + Sync {
+    /// True only when durable claims and receipts (including result bodies) are encrypted.
+    fn encrypted_at_rest(&self) -> bool {
+        false
+    }
     async fn claim(&self, operation: &Operation) -> Result<ClaimResult>;
     async fn complete(&self, operation: &Operation, receipt: &Receipt) -> Result<()>;
 }

@@ -408,7 +408,16 @@ pub(crate) fn validate_operation(op: &Operation) -> Result<()> {
         return Err(invalid("operation digest"));
     }
     if op.request.operation == "tool.invoke" {
-        if op.request.args["name"] != op.tool_name {
+        if op.request.args["name"] == crate::memory_publication::TOOL_NAME
+            || op.request.args["name"] == crate::terminal_persistence::TOOL_NAME
+            || op.tool_name == "MemoryPublication"
+        {
+            if !crate::memory_publication::valid_profile(op)
+                && !crate::terminal_persistence::valid_profile(op)
+            {
+                return Err(invalid("invalid reserved publication profile"));
+            }
+        } else if op.request.args["name"] != op.tool_name {
             return Err(invalid("reserved or substituted tool name"));
         }
         super::parse_tool_arguments(

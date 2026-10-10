@@ -55,11 +55,15 @@ pub fn run(args: Vec<String>) -> Result<(), String> {
                 return Err("TANSR_RUST_SERVE_FIXTURE is not an existing file".into());
             }
             let fixture = fixture.canonicalize().map_err(|error| format!("resolve Serve fixture: {error}"))?;
+            for name in ["TANSR_RUST_PUBLICATION_FIXTURE", "TANSR_RUST_MEMORY_DEMO"] {
+                let path = std::env::var_os(name).ok_or_else(|| format!("{name} must name the explicit publication integration input"))?;
+                if !PathBuf::from(path).is_file() { return Err(format!("{name} is not an existing file")); }
+            }
             let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
             let status = Command::new(cargo)
                 .current_dir(&root)
                 .env("TANSR_RUST_SERVE_FIXTURE", fixture)
-                .args(["test", "--workspace", "--all-features", "--locked", "--no-fail-fast", "--test", "serve_integration", "--test", "serve_executor", "--test", "serve_archive", "--test", "serve_demos", "--", "--ignored", "--nocapture", "--test-threads=1"])
+                .args(["test", "--workspace", "--all-features", "--locked", "--no-fail-fast", "--test", "serve_integration", "--test", "serve_executor", "--test", "serve_archive", "--test", "serve_demos", "--test", "serve_memory_publication", "--", "--ignored", "--nocapture", "--test-threads=1"])
                 .status()
                 .map_err(|error| format!("start required Serve integration: {error}"))?;
             if !status.success() {

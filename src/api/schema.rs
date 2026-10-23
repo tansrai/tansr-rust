@@ -68,8 +68,30 @@ fn schema(family: &str) -> Result<&'static Schema> {
         }};
     }
     match family {
-        "unified-v1" => frozen!("unified-v1.schema.json"),
-        "sdk2-ext-v1" => frozen!("sdk2-ext-v1.schema.json"),
+        "unified-v1" | "sdk2-ext-v1" | "persistence-custody-handoff-v1" => {
+            static UNIFIED: OnceLock<std::result::Result<Schema, String>> = OnceLock::new();
+            static SDK2: OnceLock<std::result::Result<Schema, String>> = OnceLock::new();
+            static CUSTODY: OnceLock<std::result::Result<Schema, String>> = OnceLock::new();
+            let (cell, bytes) = match family {
+                "unified-v1" => (
+                    &UNIFIED,
+                    include_str!("../serve_persistence/assets/unified-v1.schema.json"),
+                ),
+                "sdk2-ext-v1" => (
+                    &SDK2,
+                    include_str!("../serve_persistence/assets/sdk2-ext-v1.schema.json"),
+                ),
+                _ => (
+                    &CUSTODY,
+                    include_str!(
+                        "../serve_persistence/assets/persistence-custody-handoff-v1.schema.json"
+                    ),
+                ),
+            };
+            cell.get_or_init(|| Schema::load(bytes))
+                .as_ref()
+                .map_err(|reason| Error::Contract(reason.clone()))
+        }
         "terminal-services-v1" => frozen!("terminal-services-v1.schema.json"),
         "terminal-persistence-v1" => {
             static SCHEMA: OnceLock<std::result::Result<Schema, String>> = OnceLock::new();

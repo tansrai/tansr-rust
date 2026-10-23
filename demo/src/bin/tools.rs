@@ -5,9 +5,9 @@ use std::{collections::BTreeMap, path::PathBuf, sync::Arc, time::Duration};
 use tansr_sdk::{
     api::{Error, Result},
     executor::{
-        self, Authorizer, Binding, Client, FileJournal, Operation, PROTOCOL, Platform,
-        Registration, Runner, RunnerOptions, Scope, TerminalSessionReference, Tool, ToolContext,
-        ToolDefinition, ToolError, ToolHandler, Workspace,
+        self, Authorizer, Binding, Client, CloudJournal, FileJournal, Journal, Operation, PROTOCOL,
+        Platform, Registration, Runner, RunnerOptions, Scope, TerminalSessionReference, Tool,
+        ToolContext, ToolDefinition, ToolError, ToolHandler, Workspace,
     },
     session::{CreateOptions, SessionClient},
 };
@@ -17,7 +17,7 @@ use tansr_sdk_demo::{
 use tokio_util::sync::CancellationToken;
 
 const TOOL: &str = "DemoOrderStatus";
-const HELP: &str = "tansr-tools --journal ABSOLUTE_PRIVATE_DIRECTORY [--session ID] [--executor ID] [--base ORIGIN] [--family sdk1|sdk2-offload-v1] [--require-output]\nNew offload sessions additionally require --request-id STABLE_ID.\nCurrent authenticated scope: --application / TANSR_APPLICATION_SCOPE_ID; --user / TANSR_END_USER_ID; --authorization-revision / TANSR_AUTHORIZATION_REVISION.\nRequires TANSR_TOKEN_FILE and a policy permitting DemoOrderStatus. --require-output negotiates business output: stdout before the synthetic lookup, stderr after it, and final seal confirmation tracked separately from the durable business receipt. Missing per-operation output support rejects execution; it never borrows Shell permissions. No shell/filesystem access is installed.";
+const HELP: &str = "tansr-tools [--persistence legacy|terminal|cloud] [--journal ABSOLUTE_PRIVATE_DIRECTORY] [--session ID] [--executor ID] [--base ORIGIN] [--family sdk1|sdk2-offload-v1] [--require-output]\nCloud uses its independent journal without local files; legacy/terminal require --journal.\nNew offload sessions additionally require --request-id STABLE_ID.\nCurrent authenticated scope: --application / TANSR_APPLICATION_SCOPE_ID; --user / TANSR_END_USER_ID; --authorization-revision / TANSR_AUTHORIZATION_REVISION.\nRequires TANSR_TOKEN_FILE and a policy permitting DemoOrderStatus. --require-output negotiates business output: stdout before the synthetic lookup, stderr after it, and final seal confirmation tracked separately from the durable business receipt. Missing per-operation output support rejects execution; it never borrows Shell permissions. No shell/filesystem access is installed.";
 
 fn declaration() -> Value {
     json!({"name":TOOL,"description":"Read the status of sample order DEMO-001; this is demonstration data.","parameters":{"orderId":{"type":"string","description":"Sample order ID: DEMO-001"}},"readOnly":true})
@@ -124,8 +124,19 @@ async fn run() -> Result<()> {
             "TANSR_AUTHORIZATION_REVISION",
         )?,
     };
-    let journal_path = PathBuf::from(args.required("--journal")?);
-    if !journal_path.is_absolute() {
+    let persistence = args.value("--persistence", "legacy");
+    if !matches!(persistence.as_str(), "legacy" | "terminal" | "cloud") {
+        return Err(Error::InvalidInput(
+            "persistence must be legacy, terminal or cloud".into(),
+        ));
+    }
+    let journal_path = args.take("--journal").map(PathBuf::from);
+    if persistence == "cloud" && journal_path.is_some() {
+        return Err(Error::InvalidInput(
+            "cloud journal does not use a local --journal".into(),
+        ));
+    }
+    if persistence != "cloud" && journal_path.as_ref().is_none_or(|p| !p.is_absolute()) {
         return Err(Error::InvalidInput(
             "journal must be an absolute private directory".into(),
         ));
@@ -172,7 +183,32 @@ async fn run() -> Result<()> {
         }],
         interpreter: None,
     };
-    let journal = Arc::new(FileJournal::open(journal_path)?);
+    let journal: Arc<dyn Journal> = if persistence == "legacy" {
+        Arc::new(FileJournal::open(journal_path.ok_or_else(|| {
+            Error::InvalidInput("journal required".into())
+        })?)?)
+    } else {
+        let placement = tansr_sdk::serve_persistence::Client::new(api.clone())
+            .discover(current.id())
+            .await?;
+        if placement.mode != persistence {
+            return Err(Error::Contract(
+                "explicit storage mode differs from Serve".into(),
+            ));
+        }
+        if persistence == "cloud" {
+            if !placement.handoff.execution_journal {
+                return Err(Error::Contract(
+                    "Serve has no independent cloud journal".into(),
+                ));
+            }
+            CloudJournal::new(api.clone(), registration.executor_id.clone(), 64)?
+        } else {
+            Arc::new(FileJournal::open(journal_path.ok_or_else(|| {
+                Error::InvalidInput("journal required".into())
+            })?)?)
+        }
+    };
     let connection = executor.register(&registration).await?;
     let closure = current.capabilities().await?;
     let initialized = executor

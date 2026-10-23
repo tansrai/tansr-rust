@@ -1,0 +1,2445 @@
+{
+  "description": "可选托管交接合同。结构金样不证明CAS、权限、全部目录与原业务事实；纯字节向量由跨语言独立核算。",
+  "schemaSha256": "8c84ad5ba1461207dd0d9f11871989aeb8b971f6557c39ca4e06a690e191f9d9",
+  "positive": [
+    {
+      "id": "request-prepare",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "prepare",
+        "source": {
+          "custodyId": "terminal-a",
+          "custodyRevision": "1",
+          "mode": "terminal"
+        },
+        "destination": {
+          "custodyId": "cloud-a",
+          "mode": "cloud"
+        },
+        "expectedWriterFence": "1",
+        "expectedRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118"
+      }
+    },
+    {
+      "id": "request-export-page",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "export-page",
+        "cursor": null,
+        "limit": 32
+      }
+    },
+    {
+      "id": "request-export-object",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "export-object",
+        "object": {
+          "kind": "custody-control",
+          "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+          "byteLength": 375
+        },
+        "offset": 0,
+        "length": 12288
+      }
+    },
+    {
+      "id": "request-import-page",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "import-page",
+        "proof": {
+          "originFormat": "terminal-persistence-v1",
+          "fixedRoot": "bd591ebf04e55793a1089929e2ee6f9315b609a7c3a7f91a4b4a556b446bebf9",
+          "originalCommitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+          "indexRoot": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+          "indexCount": "0",
+          "inventoryDigest": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+          "records": 1,
+          "objects": 1,
+          "bytes": 375
+        },
+        "page": {
+          "index": "0",
+          "previousDigest": "73edc901c1c612db0ac7a5321450ae60d5514a375432a0cc5f3cc66addd8b3b1",
+          "sha256": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+          "records": [
+            {
+              "kind": "root",
+              "root": {
+                "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+                "generation": "1",
+                "body": {
+                  "byteLength": 5,
+                  "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                  "blockCount": 1,
+                  "pageHashes": [
+                    "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                  ]
+                },
+                "index": {
+                  "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                  "count": "0"
+                }
+              },
+              "controlRef": {
+                "kind": "custody-control",
+                "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+                "byteLength": 375
+              }
+            }
+          ],
+          "complete": true
+        }
+      }
+    },
+    {
+      "id": "request-import-object",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "import-object",
+        "chunk": {
+          "object": {
+            "kind": "custody-control",
+            "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+            "byteLength": 375
+          },
+          "offset": 0,
+          "byteLength": 375,
+          "base64": "eyJjYXBhY2l0eSI6eyJhY3RpdmVUcmFuc2ZlcnMiOjAsIm9iamVjdHMiOjAsInJlY2VpcHRFbnRyaWVzIjowLCJyZXNlcnZlZEJ5dGVzIjowLCJyZXNlcnZlZE9iamVjdHMiOjAsInJlc2VydmVkUmVjZWlwdEVudHJpZXMiOjAsInJldGFpbmVkQnl0ZXMiOjAsInN0YWdpbmdCeXRlcyI6MCwidHJhbnNmZXJGYWN0cyI6MH0sImZvcm1hdCI6InRlcm1pbmFsLXBlcnNpc3RlbmNlLWNvbnRyb2wtdjEiLCJsaW1pdHMiOnsiYWN0aXZlVHJhbnNmZXJzIjozMiwib2JqZWN0cyI6MTA0ODU3NiwicmVjZWlwdEVudHJpZXMiOjEwNDg1NzYsInJldGFpbmVkQnl0ZXMiOjEwNzM3NDE4MjQsInN0YWdpbmdCeXRlcyI6NjcxMDg4NjQsInRyYW5zZmVyRmFjdHMiOjI2MjE0NH19",
+          "payloadDigest": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014"
+        }
+      }
+    },
+    {
+      "id": "request-verify",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "verify",
+        "proof": {
+          "originFormat": "terminal-persistence-v1",
+          "fixedRoot": "bd591ebf04e55793a1089929e2ee6f9315b609a7c3a7f91a4b4a556b446bebf9",
+          "originalCommitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+          "indexRoot": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+          "indexCount": "0",
+          "inventoryDigest": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+          "records": 1,
+          "objects": 1,
+          "bytes": 375
+        }
+      }
+    },
+    {
+      "id": "request-cutover",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "cutover",
+        "proof": {
+          "originFormat": "terminal-persistence-v1",
+          "fixedRoot": "bd591ebf04e55793a1089929e2ee6f9315b609a7c3a7f91a4b4a556b446bebf9",
+          "originalCommitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+          "indexRoot": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+          "indexCount": "0",
+          "inventoryDigest": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+          "records": 1,
+          "objects": 1,
+          "bytes": 375
+        },
+        "expectedWriterFence": "2",
+        "expectedCustodyRevision": "1"
+      }
+    },
+    {
+      "id": "request-query",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "query"
+      }
+    },
+    {
+      "id": "request-abort",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "abort",
+        "expectedWriterFence": "2",
+        "expectedCustodyRevision": "1"
+      }
+    },
+    {
+      "id": "request-writer-claim",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "3f220a1c5527293ef0e8ade0bf46cec948d2ec5f1333e4af2cf01fdcd4a53108",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "writer-claim",
+        "custody": {
+          "custodyId": "terminal-a",
+          "custodyRevision": "1",
+          "mode": "terminal"
+        },
+        "expectedWriterFence": "1"
+      }
+    },
+    {
+      "id": "request-writer-query",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "3f220a1c5527293ef0e8ade0bf46cec948d2ec5f1333e4af2cf01fdcd4a53108",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "writer-query",
+        "custody": {
+          "custodyId": "terminal-a",
+          "custodyRevision": "1",
+          "mode": "terminal"
+        }
+      }
+    },
+    {
+      "id": "request-writer-finish",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "3f220a1c5527293ef0e8ade0bf46cec948d2ec5f1333e4af2cf01fdcd4a53108",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "writer-finish",
+        "custody": {
+          "custodyId": "terminal-a",
+          "custodyRevision": "1",
+          "mode": "terminal"
+        },
+        "claimId": "claim-1",
+        "writerFence": "1",
+        "settlement": {
+          "state": "committed",
+          "responseDigest": "a9f4b3d22a523fdada41c85c175425bcd15b32b4cd0f54d9433accd52d7195a1"
+        }
+      }
+    },
+    {
+      "id": "response-prepare",
+      "definition": "Response",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "prepare",
+        "ticket": {
+          "operationId": "handoff-1",
+          "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+          "identity": {
+            "applicationScopeId": "app",
+            "endUserId": "user",
+            "sourceId": "source",
+            "sourceGeneration": "1",
+            "domainKey": "domain"
+          },
+          "phase": "prepared",
+          "source": {
+            "custodyId": "terminal-a",
+            "custodyRevision": "1",
+            "mode": "terminal"
+          },
+          "destination": {
+            "custodyId": "cloud-a",
+            "mode": "cloud"
+          },
+          "writerFence": "2",
+          "proof": {
+            "originFormat": "terminal-persistence-v1",
+            "fixedRoot": "bd591ebf04e55793a1089929e2ee6f9315b609a7c3a7f91a4b4a556b446bebf9",
+            "originalCommitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+            "indexRoot": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+            "indexCount": "0",
+            "inventoryDigest": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+            "records": 1,
+            "objects": 1,
+            "bytes": 375
+          },
+          "selectedCustody": {
+            "custodyId": "terminal-a",
+            "custodyRevision": "1",
+            "mode": "terminal"
+          }
+        }
+      }
+    },
+    {
+      "id": "response-export-page",
+      "definition": "Response",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "export-page",
+        "proof": {
+          "originFormat": "terminal-persistence-v1",
+          "fixedRoot": "bd591ebf04e55793a1089929e2ee6f9315b609a7c3a7f91a4b4a556b446bebf9",
+          "originalCommitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+          "indexRoot": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+          "indexCount": "0",
+          "inventoryDigest": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+          "records": 1,
+          "objects": 1,
+          "bytes": 375
+        },
+        "page": {
+          "index": "0",
+          "previousDigest": "73edc901c1c612db0ac7a5321450ae60d5514a375432a0cc5f3cc66addd8b3b1",
+          "sha256": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+          "records": [
+            {
+              "kind": "root",
+              "root": {
+                "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+                "generation": "1",
+                "body": {
+                  "byteLength": 5,
+                  "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                  "blockCount": 1,
+                  "pageHashes": [
+                    "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                  ]
+                },
+                "index": {
+                  "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                  "count": "0"
+                }
+              },
+              "controlRef": {
+                "kind": "custody-control",
+                "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+                "byteLength": 375
+              }
+            }
+          ],
+          "complete": true
+        },
+        "nextCursor": null
+      }
+    },
+    {
+      "id": "response-export-object",
+      "definition": "Response",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "export-object",
+        "chunk": {
+          "object": {
+            "kind": "custody-control",
+            "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+            "byteLength": 375
+          },
+          "offset": 0,
+          "byteLength": 375,
+          "base64": "eyJjYXBhY2l0eSI6eyJhY3RpdmVUcmFuc2ZlcnMiOjAsIm9iamVjdHMiOjAsInJlY2VpcHRFbnRyaWVzIjowLCJyZXNlcnZlZEJ5dGVzIjowLCJyZXNlcnZlZE9iamVjdHMiOjAsInJlc2VydmVkUmVjZWlwdEVudHJpZXMiOjAsInJldGFpbmVkQnl0ZXMiOjAsInN0YWdpbmdCeXRlcyI6MCwidHJhbnNmZXJGYWN0cyI6MH0sImZvcm1hdCI6InRlcm1pbmFsLXBlcnNpc3RlbmNlLWNvbnRyb2wtdjEiLCJsaW1pdHMiOnsiYWN0aXZlVHJhbnNmZXJzIjozMiwib2JqZWN0cyI6MTA0ODU3NiwicmVjZWlwdEVudHJpZXMiOjEwNDg1NzYsInJldGFpbmVkQnl0ZXMiOjEwNzM3NDE4MjQsInN0YWdpbmdCeXRlcyI6NjcxMDg4NjQsInRyYW5zZmVyRmFjdHMiOjI2MjE0NH19",
+          "payloadDigest": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014"
+        }
+      }
+    },
+    {
+      "id": "response-import-page",
+      "definition": "Response",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "import-page",
+        "ticket": {
+          "operationId": "handoff-1",
+          "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+          "identity": {
+            "applicationScopeId": "app",
+            "endUserId": "user",
+            "sourceId": "source",
+            "sourceGeneration": "1",
+            "domainKey": "domain"
+          },
+          "phase": "prepared",
+          "source": {
+            "custodyId": "terminal-a",
+            "custodyRevision": "1",
+            "mode": "terminal"
+          },
+          "destination": {
+            "custodyId": "cloud-a",
+            "mode": "cloud"
+          },
+          "writerFence": "2",
+          "proof": {
+            "originFormat": "terminal-persistence-v1",
+            "fixedRoot": "bd591ebf04e55793a1089929e2ee6f9315b609a7c3a7f91a4b4a556b446bebf9",
+            "originalCommitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+            "indexRoot": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+            "indexCount": "0",
+            "inventoryDigest": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+            "records": 1,
+            "objects": 1,
+            "bytes": 375
+          },
+          "selectedCustody": {
+            "custodyId": "terminal-a",
+            "custodyRevision": "1",
+            "mode": "terminal"
+          }
+        },
+        "pageDigest": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59"
+      }
+    },
+    {
+      "id": "response-import-object",
+      "definition": "Response",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "import-object",
+        "ticket": {
+          "operationId": "handoff-1",
+          "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+          "identity": {
+            "applicationScopeId": "app",
+            "endUserId": "user",
+            "sourceId": "source",
+            "sourceGeneration": "1",
+            "domainKey": "domain"
+          },
+          "phase": "prepared",
+          "source": {
+            "custodyId": "terminal-a",
+            "custodyRevision": "1",
+            "mode": "terminal"
+          },
+          "destination": {
+            "custodyId": "cloud-a",
+            "mode": "cloud"
+          },
+          "writerFence": "2",
+          "proof": {
+            "originFormat": "terminal-persistence-v1",
+            "fixedRoot": "bd591ebf04e55793a1089929e2ee6f9315b609a7c3a7f91a4b4a556b446bebf9",
+            "originalCommitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+            "indexRoot": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+            "indexCount": "0",
+            "inventoryDigest": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+            "records": 1,
+            "objects": 1,
+            "bytes": 375
+          },
+          "selectedCustody": {
+            "custodyId": "terminal-a",
+            "custodyRevision": "1",
+            "mode": "terminal"
+          }
+        },
+        "object": {
+          "kind": "custody-control",
+          "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+          "byteLength": 375
+        },
+        "nextOffset": 375
+      }
+    },
+    {
+      "id": "response-verify",
+      "definition": "Response",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "verify",
+        "ticket": {
+          "operationId": "handoff-1",
+          "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+          "identity": {
+            "applicationScopeId": "app",
+            "endUserId": "user",
+            "sourceId": "source",
+            "sourceGeneration": "1",
+            "domainKey": "domain"
+          },
+          "phase": "prepared",
+          "source": {
+            "custodyId": "terminal-a",
+            "custodyRevision": "1",
+            "mode": "terminal"
+          },
+          "destination": {
+            "custodyId": "cloud-a",
+            "mode": "cloud"
+          },
+          "writerFence": "2",
+          "proof": {
+            "originFormat": "terminal-persistence-v1",
+            "fixedRoot": "bd591ebf04e55793a1089929e2ee6f9315b609a7c3a7f91a4b4a556b446bebf9",
+            "originalCommitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+            "indexRoot": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+            "indexCount": "0",
+            "inventoryDigest": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+            "records": 1,
+            "objects": 1,
+            "bytes": 375
+          },
+          "selectedCustody": {
+            "custodyId": "terminal-a",
+            "custodyRevision": "1",
+            "mode": "terminal"
+          }
+        }
+      }
+    },
+    {
+      "id": "response-cutover",
+      "definition": "Response",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "cutover",
+        "ticket": {
+          "operationId": "handoff-1",
+          "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+          "identity": {
+            "applicationScopeId": "app",
+            "endUserId": "user",
+            "sourceId": "source",
+            "sourceGeneration": "1",
+            "domainKey": "domain"
+          },
+          "phase": "published",
+          "source": {
+            "custodyId": "terminal-a",
+            "custodyRevision": "1",
+            "mode": "terminal"
+          },
+          "destination": {
+            "custodyId": "cloud-a",
+            "mode": "cloud"
+          },
+          "writerFence": "2",
+          "proof": {
+            "originFormat": "terminal-persistence-v1",
+            "fixedRoot": "bd591ebf04e55793a1089929e2ee6f9315b609a7c3a7f91a4b4a556b446bebf9",
+            "originalCommitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+            "indexRoot": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+            "indexCount": "0",
+            "inventoryDigest": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+            "records": 1,
+            "objects": 1,
+            "bytes": 375
+          },
+          "selectedCustody": {
+            "custodyId": "cloud-a",
+            "mode": "cloud",
+            "custodyRevision": "2"
+          }
+        }
+      }
+    },
+    {
+      "id": "response-query",
+      "definition": "Response",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "query",
+        "preparing": true,
+        "ticket": null
+      }
+    },
+    {
+      "id": "response-abort",
+      "definition": "Response",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "abort",
+        "ticket": {
+          "operationId": "handoff-1",
+          "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+          "identity": {
+            "applicationScopeId": "app",
+            "endUserId": "user",
+            "sourceId": "source",
+            "sourceGeneration": "1",
+            "domainKey": "domain"
+          },
+          "phase": "aborted",
+          "source": {
+            "custodyId": "terminal-a",
+            "custodyRevision": "1",
+            "mode": "terminal"
+          },
+          "destination": {
+            "custodyId": "cloud-a",
+            "mode": "cloud"
+          },
+          "writerFence": "2",
+          "proof": {
+            "originFormat": "terminal-persistence-v1",
+            "fixedRoot": "bd591ebf04e55793a1089929e2ee6f9315b609a7c3a7f91a4b4a556b446bebf9",
+            "originalCommitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+            "indexRoot": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+            "indexCount": "0",
+            "inventoryDigest": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+            "records": 1,
+            "objects": 1,
+            "bytes": 375
+          },
+          "selectedCustody": {
+            "custodyId": "terminal-a",
+            "custodyRevision": "1",
+            "mode": "terminal"
+          }
+        }
+      }
+    },
+    {
+      "id": "response-writer-claim",
+      "definition": "Response",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "3f220a1c5527293ef0e8ade0bf46cec948d2ec5f1333e4af2cf01fdcd4a53108",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "writer-claim",
+        "claim": {
+          "operationId": "3f220a1c5527293ef0e8ade0bf46cec948d2ec5f1333e4af2cf01fdcd4a53108",
+          "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+          "claimId": "claim-1",
+          "writerFence": "1",
+          "status": "active",
+          "selectedCustody": {
+            "custodyId": "terminal-a",
+            "custodyRevision": "1",
+            "mode": "terminal"
+          },
+          "responseDigest": null
+        }
+      }
+    },
+    {
+      "id": "response-writer-query",
+      "definition": "Response",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "3f220a1c5527293ef0e8ade0bf46cec948d2ec5f1333e4af2cf01fdcd4a53108",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "writer-query",
+        "claim": null
+      }
+    },
+    {
+      "id": "response-writer-finish",
+      "definition": "Response",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "3f220a1c5527293ef0e8ade0bf46cec948d2ec5f1333e4af2cf01fdcd4a53108",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "writer-finish",
+        "claim": {
+          "operationId": "3f220a1c5527293ef0e8ade0bf46cec948d2ec5f1333e4af2cf01fdcd4a53108",
+          "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+          "claimId": "claim-1",
+          "writerFence": "1",
+          "status": "settled",
+          "selectedCustody": {
+            "custodyId": "terminal-a",
+            "custodyRevision": "1",
+            "mode": "terminal"
+          },
+          "responseDigest": "a9f4b3d22a523fdada41c85c175425bcd15b32b4cd0f54d9433accd52d7195a1"
+        }
+      }
+    },
+    {
+      "id": "capability-disabled",
+      "definition": "CapabilitiesResponse",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "capability": "persistence-custody-handoff-v1",
+        "installed": false,
+        "schemaRevision": "2026-10-21.v1",
+        "limits": {
+          "maxControlBytes": 32768,
+          "maxObjectChunkBytes": 12288,
+          "maxPageRecords": 32,
+          "maxReceiptEntries": 1048576,
+          "maxTransferFacts": 262144,
+          "maxRetainedBytes": 1073741824,
+          "maxTransferMetadataBytes": 524288
+        },
+        "writerAuthority": "unavailable"
+      }
+    },
+    {
+      "id": "portable-control",
+      "definition": "ControlState",
+      "value": {
+        "format": "terminal-persistence-control-v1",
+        "capacity": {
+          "activeTransfers": 0,
+          "stagingBytes": 0,
+          "receiptEntries": 0,
+          "transferFacts": 0,
+          "objects": 0,
+          "retainedBytes": 0,
+          "reservedBytes": 0,
+          "reservedObjects": 0,
+          "reservedReceiptEntries": 0
+        },
+        "limits": {
+          "activeTransfers": 32,
+          "stagingBytes": 67108864,
+          "receiptEntries": 1048576,
+          "transferFacts": 262144,
+          "objects": 1048576,
+          "retainedBytes": 1073741824
+        }
+      }
+    },
+    {
+      "id": "portable-transfer",
+      "definition": "TransferMetadata",
+      "value": {
+        "begin": {
+          "contract": "terminal-persistence-v1",
+          "sourceId": "example-source",
+          "sourceGeneration": "1",
+          "domainKey": "example-domain",
+          "action": "begin",
+          "transferId": "example-transfer-1",
+          "expected": null,
+          "body": {
+            "byteLength": 5,
+            "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+            "blockCount": 1,
+            "pageHashes": [
+              "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+            ]
+          },
+          "index": {
+            "entryCount": 0,
+            "addedCount": 0,
+            "pageHashes": []
+          },
+          "declared": {
+            "objects": 2,
+            "bytes": 149
+          },
+          "intentSha256": "e22a76bb00bd7b084fce45a08375eb39a5b075626f74bb5587ae88c9bf861ce1"
+        },
+        "owner": {
+          "scope": {
+            "applicationScopeId": "app",
+            "endUserId": "user",
+            "authorizationRevision": "1"
+          },
+          "sessionId": "session",
+          "binding": {
+            "bindingId": "binding",
+            "revision": "1",
+            "target": {
+              "executorId": "pc",
+              "connectionId": "conn",
+              "connectionRevision": "1",
+              "workspaceId": "work",
+              "workspaceRevision": "1"
+            }
+          }
+        },
+        "baseRoot": null,
+        "transfer": {
+          "transferId": "example-transfer-1",
+          "intentSha256": "e22a76bb00bd7b084fce45a08375eb39a5b075626f74bb5587ae88c9bf861ce1",
+          "status": "staging",
+          "progress": {
+            "pagesReady": "AA==",
+            "bodyReady": "AA==",
+            "valuesReady": "",
+            "receivedBytes": 0
+          },
+          "result": null,
+          "rejection": null
+        },
+        "received": [],
+        "reused": [],
+        "reservedBytes": 149,
+        "reservedObjects": 2,
+        "reservedEntries": 0,
+        "stagingBytes": 149
+      }
+    },
+    {
+      "id": "legacy-typed-primary-key",
+      "definition": "LegacyControlRecord",
+      "value": {
+        "kind": "legacy-control",
+        "domain": "budget",
+        "codec": "sdk2-host-budget-v1",
+        "relativePath": "control/budget.sqlite",
+        "table": "budget_meta",
+        "originalKey": [
+          {
+            "type": "integer",
+            "decimal": "1"
+          }
+        ],
+        "originalDigest": null,
+        "state": "settled",
+        "payload": {
+          "kind": "legacy-control",
+          "sha256": "634768dae1474506e4bf7d341890542b09987d7e6aea5d446c02e37581a56954",
+          "byteLength": 3
+        }
+      }
+    },
+    {
+      "id": "migration-budget-original-default",
+      "definition": "MigrationBudget",
+      "value": {
+        "bytes": 1073741824,
+        "objects": 1048576
+      }
+    },
+    {
+      "id": "migration-budget-absolute-bound",
+      "definition": "MigrationBudget",
+      "value": {
+        "bytes": 1102569742,
+        "objects": 1310721
+      }
+    },
+    {
+      "id": "root-proof-physical-bound",
+      "definition": "RootProof",
+      "value": {
+        "originFormat": "terminal-persistence-v1",
+        "fixedRoot": "bd591ebf04e55793a1089929e2ee6f9315b609a7c3a7f91a4b4a556b446bebf9",
+        "originalCommitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+        "indexRoot": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+        "indexCount": "0",
+        "inventoryDigest": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+        "records": 1,
+        "objects": 1310721,
+        "bytes": 1102569742
+      }
+    }
+  ],
+  "negative": [
+    {
+      "id": "request-prepare-unknown-field",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "prepare",
+        "source": {
+          "custodyId": "terminal-a",
+          "custodyRevision": "1",
+          "mode": "terminal"
+        },
+        "destination": {
+          "custodyId": "cloud-a",
+          "mode": "cloud"
+        },
+        "expectedWriterFence": "1",
+        "expectedRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+        "unexpected": true
+      }
+    },
+    {
+      "id": "request-export-page-unknown-field",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "export-page",
+        "cursor": null,
+        "limit": 32,
+        "unexpected": true
+      }
+    },
+    {
+      "id": "request-export-object-unknown-field",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "export-object",
+        "object": {
+          "kind": "custody-control",
+          "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+          "byteLength": 375
+        },
+        "offset": 0,
+        "length": 12288,
+        "unexpected": true
+      }
+    },
+    {
+      "id": "request-import-page-unknown-field",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "import-page",
+        "proof": {
+          "originFormat": "terminal-persistence-v1",
+          "fixedRoot": "bd591ebf04e55793a1089929e2ee6f9315b609a7c3a7f91a4b4a556b446bebf9",
+          "originalCommitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+          "indexRoot": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+          "indexCount": "0",
+          "inventoryDigest": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+          "records": 1,
+          "objects": 1,
+          "bytes": 375
+        },
+        "page": {
+          "index": "0",
+          "previousDigest": "73edc901c1c612db0ac7a5321450ae60d5514a375432a0cc5f3cc66addd8b3b1",
+          "sha256": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+          "records": [
+            {
+              "kind": "root",
+              "root": {
+                "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+                "generation": "1",
+                "body": {
+                  "byteLength": 5,
+                  "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                  "blockCount": 1,
+                  "pageHashes": [
+                    "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                  ]
+                },
+                "index": {
+                  "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                  "count": "0"
+                }
+              },
+              "controlRef": {
+                "kind": "custody-control",
+                "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+                "byteLength": 375
+              }
+            }
+          ],
+          "complete": true
+        },
+        "unexpected": true
+      }
+    },
+    {
+      "id": "request-import-object-unknown-field",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "import-object",
+        "chunk": {
+          "object": {
+            "kind": "custody-control",
+            "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+            "byteLength": 375
+          },
+          "offset": 0,
+          "byteLength": 375,
+          "base64": "eyJjYXBhY2l0eSI6eyJhY3RpdmVUcmFuc2ZlcnMiOjAsIm9iamVjdHMiOjAsInJlY2VpcHRFbnRyaWVzIjowLCJyZXNlcnZlZEJ5dGVzIjowLCJyZXNlcnZlZE9iamVjdHMiOjAsInJlc2VydmVkUmVjZWlwdEVudHJpZXMiOjAsInJldGFpbmVkQnl0ZXMiOjAsInN0YWdpbmdCeXRlcyI6MCwidHJhbnNmZXJGYWN0cyI6MH0sImZvcm1hdCI6InRlcm1pbmFsLXBlcnNpc3RlbmNlLWNvbnRyb2wtdjEiLCJsaW1pdHMiOnsiYWN0aXZlVHJhbnNmZXJzIjozMiwib2JqZWN0cyI6MTA0ODU3NiwicmVjZWlwdEVudHJpZXMiOjEwNDg1NzYsInJldGFpbmVkQnl0ZXMiOjEwNzM3NDE4MjQsInN0YWdpbmdCeXRlcyI6NjcxMDg4NjQsInRyYW5zZmVyRmFjdHMiOjI2MjE0NH19",
+          "payloadDigest": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014"
+        },
+        "unexpected": true
+      }
+    },
+    {
+      "id": "request-verify-unknown-field",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "verify",
+        "proof": {
+          "originFormat": "terminal-persistence-v1",
+          "fixedRoot": "bd591ebf04e55793a1089929e2ee6f9315b609a7c3a7f91a4b4a556b446bebf9",
+          "originalCommitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+          "indexRoot": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+          "indexCount": "0",
+          "inventoryDigest": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+          "records": 1,
+          "objects": 1,
+          "bytes": 375
+        },
+        "unexpected": true
+      }
+    },
+    {
+      "id": "request-cutover-unknown-field",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "cutover",
+        "proof": {
+          "originFormat": "terminal-persistence-v1",
+          "fixedRoot": "bd591ebf04e55793a1089929e2ee6f9315b609a7c3a7f91a4b4a556b446bebf9",
+          "originalCommitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+          "indexRoot": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+          "indexCount": "0",
+          "inventoryDigest": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+          "records": 1,
+          "objects": 1,
+          "bytes": 375
+        },
+        "expectedWriterFence": "2",
+        "expectedCustodyRevision": "1",
+        "unexpected": true
+      }
+    },
+    {
+      "id": "request-query-unknown-field",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "query",
+        "unexpected": true
+      }
+    },
+    {
+      "id": "request-abort-unknown-field",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "handoff-1",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "abort",
+        "expectedWriterFence": "2",
+        "expectedCustodyRevision": "1",
+        "unexpected": true
+      }
+    },
+    {
+      "id": "request-writer-claim-unknown-field",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "3f220a1c5527293ef0e8ade0bf46cec948d2ec5f1333e4af2cf01fdcd4a53108",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "writer-claim",
+        "custody": {
+          "custodyId": "terminal-a",
+          "custodyRevision": "1",
+          "mode": "terminal"
+        },
+        "expectedWriterFence": "1",
+        "unexpected": true
+      }
+    },
+    {
+      "id": "request-writer-query-unknown-field",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "3f220a1c5527293ef0e8ade0bf46cec948d2ec5f1333e4af2cf01fdcd4a53108",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "writer-query",
+        "custody": {
+          "custodyId": "terminal-a",
+          "custodyRevision": "1",
+          "mode": "terminal"
+        },
+        "unexpected": true
+      }
+    },
+    {
+      "id": "request-writer-finish-unknown-field",
+      "definition": "Request",
+      "value": {
+        "contract": "persistence-custody-handoff-v1",
+        "identity": {
+          "applicationScopeId": "app",
+          "endUserId": "user",
+          "sourceId": "source",
+          "sourceGeneration": "1",
+          "domainKey": "domain"
+        },
+        "operationId": "3f220a1c5527293ef0e8ade0bf46cec948d2ec5f1333e4af2cf01fdcd4a53108",
+        "intentSha256": "282bcbc3f0a34a8a4ac6f00c276fcf66cf3757a3332e83d92208e5079af46922",
+        "action": "writer-finish",
+        "custody": {
+          "custodyId": "terminal-a",
+          "custodyRevision": "1",
+          "mode": "terminal"
+        },
+        "claimId": "claim-1",
+        "writerFence": "1",
+        "settlement": {
+          "state": "committed",
+          "responseDigest": "a9f4b3d22a523fdada41c85c175425bcd15b32b4cd0f54d9433accd52d7195a1"
+        },
+        "unexpected": true
+      }
+    },
+    {
+      "id": "old-profile-not-custody",
+      "definition": "Request",
+      "value": {
+        "contract": "terminal-persistence-v1",
+        "sourceId": "example-source",
+        "sourceGeneration": "1",
+        "domainKey": "example-domain",
+        "action": "begin",
+        "transferId": "example-transfer-1",
+        "expected": null,
+        "body": {
+          "byteLength": 5,
+          "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+          "blockCount": 1,
+          "pageHashes": [
+            "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+          ]
+        },
+        "index": {
+          "entryCount": 0,
+          "addedCount": 0,
+          "pageHashes": []
+        },
+        "declared": {
+          "objects": 2,
+          "bytes": 149
+        },
+        "intentSha256": "e22a76bb00bd7b084fce45a08375eb39a5b075626f74bb5587ae88c9bf861ce1"
+      }
+    },
+    {
+      "id": "page-over-32",
+      "definition": "Page",
+      "value": {
+        "index": "0",
+        "previousDigest": "73edc901c1c612db0ac7a5321450ae60d5514a375432a0cc5f3cc66addd8b3b1",
+        "sha256": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+        "records": [
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          },
+          {
+            "kind": "root",
+            "root": {
+              "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+              "generation": "1",
+              "body": {
+                "byteLength": 5,
+                "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+                "blockCount": 1,
+                "pageHashes": [
+                  "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+                ]
+              },
+              "index": {
+                "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+                "count": "0"
+              }
+            },
+            "controlRef": {
+              "kind": "custody-control",
+              "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+              "byteLength": 375
+            }
+          }
+        ],
+        "complete": true
+      }
+    },
+    {
+      "id": "chunk-over-12288",
+      "definition": "ObjectChunk",
+      "value": {
+        "object": {
+          "kind": "custody-control",
+          "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+          "byteLength": 375
+        },
+        "offset": 0,
+        "byteLength": 12289,
+        "base64": "eyJjYXBhY2l0eSI6eyJhY3RpdmVUcmFuc2ZlcnMiOjAsIm9iamVjdHMiOjAsInJlY2VpcHRFbnRyaWVzIjowLCJyZXNlcnZlZEJ5dGVzIjowLCJyZXNlcnZlZE9iamVjdHMiOjAsInJlc2VydmVkUmVjZWlwdEVudHJpZXMiOjAsInJldGFpbmVkQnl0ZXMiOjAsInN0YWdpbmdCeXRlcyI6MCwidHJhbnNmZXJGYWN0cyI6MH0sImZvcm1hdCI6InRlcm1pbmFsLXBlcnNpc3RlbmNlLWNvbnRyb2wtdjEiLCJsaW1pdHMiOnsiYWN0aXZlVHJhbnNmZXJzIjozMiwib2JqZWN0cyI6MTA0ODU3NiwicmVjZWlwdEVudHJpZXMiOjEwNDg1NzYsInJldGFpbmVkQnl0ZXMiOjEwNzM3NDE4MjQsInN0YWdpbmdCeXRlcyI6NjcxMDg4NjQsInRyYW5zZmVyRmFjdHMiOjI2MjE0NH19",
+        "payloadDigest": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014"
+      }
+    },
+    {
+      "id": "unknown-transfer-not-portable",
+      "definition": "TransferMetadata",
+      "value": {
+        "begin": {
+          "contract": "terminal-persistence-v1",
+          "sourceId": "example-source",
+          "sourceGeneration": "1",
+          "domainKey": "example-domain",
+          "action": "begin",
+          "transferId": "example-transfer-1",
+          "expected": null,
+          "body": {
+            "byteLength": 5,
+            "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+            "blockCount": 1,
+            "pageHashes": [
+              "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+            ]
+          },
+          "index": {
+            "entryCount": 0,
+            "addedCount": 0,
+            "pageHashes": []
+          },
+          "declared": {
+            "objects": 2,
+            "bytes": 149
+          },
+          "intentSha256": "e22a76bb00bd7b084fce45a08375eb39a5b075626f74bb5587ae88c9bf861ce1"
+        },
+        "owner": {
+          "scope": {
+            "applicationScopeId": "app",
+            "endUserId": "user",
+            "authorizationRevision": "1"
+          },
+          "sessionId": "session",
+          "binding": {
+            "bindingId": "binding",
+            "revision": "1",
+            "target": {
+              "executorId": "pc",
+              "connectionId": "conn",
+              "connectionRevision": "1",
+              "workspaceId": "work",
+              "workspaceRevision": "1"
+            }
+          }
+        },
+        "baseRoot": null,
+        "transfer": {
+          "transferId": "example-transfer-1",
+          "intentSha256": "e22a76bb00bd7b084fce45a08375eb39a5b075626f74bb5587ae88c9bf861ce1",
+          "status": "unknown",
+          "progress": null,
+          "result": null,
+          "rejection": null
+        },
+        "received": [],
+        "reused": [],
+        "reservedBytes": 149,
+        "reservedObjects": 2,
+        "reservedEntries": 0,
+        "stagingBytes": 149
+      }
+    },
+    {
+      "id": "legacy-key-number-coercion",
+      "definition": "LegacyControlRecord",
+      "value": {
+        "kind": "legacy-control",
+        "domain": "budget",
+        "codec": "sdk2-host-budget-v1",
+        "relativePath": "control/budget.sqlite",
+        "table": "budget_meta",
+        "originalKey": [
+          1
+        ],
+        "originalDigest": null,
+        "state": "settled",
+        "payload": {
+          "kind": "legacy-control",
+          "sha256": "634768dae1474506e4bf7d341890542b09987d7e6aea5d446c02e37581a56954",
+          "byteLength": 3
+        }
+      }
+    },
+    {
+      "id": "migration-budget-excess-bytes",
+      "definition": "MigrationBudget",
+      "value": {
+        "bytes": 1102569743,
+        "objects": 1310721
+      }
+    },
+    {
+      "id": "migration-budget-excess-objects",
+      "definition": "MigrationBudget",
+      "value": {
+        "bytes": 1102569742,
+        "objects": 1310722
+      }
+    },
+    {
+      "id": "root-proof-excess-bytes",
+      "definition": "RootProof",
+      "value": {
+        "originFormat": "terminal-persistence-v1",
+        "fixedRoot": "bd591ebf04e55793a1089929e2ee6f9315b609a7c3a7f91a4b4a556b446bebf9",
+        "originalCommitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+        "indexRoot": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+        "indexCount": "0",
+        "inventoryDigest": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+        "records": 1,
+        "objects": 1310721,
+        "bytes": 1102569743
+      }
+    },
+    {
+      "id": "root-proof-excess-objects",
+      "definition": "RootProof",
+      "value": {
+        "originFormat": "terminal-persistence-v1",
+        "fixedRoot": "bd591ebf04e55793a1089929e2ee6f9315b609a7c3a7f91a4b4a556b446bebf9",
+        "originalCommitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+        "indexRoot": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+        "indexCount": "0",
+        "inventoryDigest": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+        "records": 1,
+        "objects": 1310722,
+        "bytes": 1102569742
+      }
+    }
+  ],
+  "digestVectors": {
+    "identity": {
+      "applicationScopeId": "app",
+      "endUserId": "user",
+      "sourceId": "source",
+      "sourceGeneration": "1",
+      "domainKey": "domain"
+    },
+    "rootRecord": {
+      "kind": "root",
+      "root": {
+        "commitRoot": "46710b4bc3043b32d8b71481e3a7a989dbb4fc47a6ec821d37b759e7b92e8118",
+        "generation": "1",
+        "body": {
+          "byteLength": 5,
+          "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+          "blockCount": 1,
+          "pageHashes": [
+            "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+          ]
+        },
+        "index": {
+          "root": "cb9c830c336a49ba1dcec5d69afcac4eb6cbeb331df780ce96b8c9f25fa63f09",
+          "count": "0"
+        }
+      },
+      "controlRef": {
+        "kind": "custody-control",
+        "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+        "byteLength": 375
+      }
+    },
+    "fixedRoot": "bd591ebf04e55793a1089929e2ee6f9315b609a7c3a7f91a4b4a556b446bebf9",
+    "previousDigest": "73edc901c1c612db0ac7a5321450ae60d5514a375432a0cc5f3cc66addd8b3b1",
+    "recordIndex": "0",
+    "recordDigest": "206e8ac43bcff317c3024b9385f45459d68b306aab1a4abc1fefe1633db24c59",
+    "control": {
+      "format": "terminal-persistence-control-v1",
+      "capacity": {
+        "activeTransfers": 0,
+        "stagingBytes": 0,
+        "receiptEntries": 0,
+        "transferFacts": 0,
+        "objects": 0,
+        "retainedBytes": 0,
+        "reservedBytes": 0,
+        "reservedObjects": 0,
+        "reservedReceiptEntries": 0
+      },
+      "limits": {
+        "activeTransfers": 32,
+        "stagingBytes": 67108864,
+        "receiptEntries": 1048576,
+        "transferFacts": 262144,
+        "objects": 1048576,
+        "retainedBytes": 1073741824
+      }
+    },
+    "controlRef": {
+      "kind": "custody-control",
+      "sha256": "9c0292ba34b715584c03e86509793f4ad99905a51793db80b307ea07a39de014",
+      "byteLength": 375
+    },
+    "writerRequest": {
+      "contract": "terminal-persistence-v1",
+      "sourceId": "example-source",
+      "sourceGeneration": "1",
+      "domainKey": "example-domain",
+      "action": "begin",
+      "transferId": "example-transfer-1",
+      "expected": null,
+      "body": {
+        "byteLength": 5,
+        "sha256": "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+        "blockCount": 1,
+        "pageHashes": [
+          "e1c92007279a6abbbce7d40127b137eefd17aea9920c5428eb7d2e51a6acd81e"
+        ]
+      },
+      "index": {
+        "entryCount": 0,
+        "addedCount": 0,
+        "pageHashes": []
+      },
+      "declared": {
+        "objects": 2,
+        "bytes": 149
+      },
+      "intentSha256": "e22a76bb00bd7b084fce45a08375eb39a5b075626f74bb5587ae88c9bf861ce1"
+    },
+    "writerOperationId": "2a316acc32788634baabf97693c3e6b25f45b61856bdff121a5a0149847636e5",
+    "writerIntentSha256": "59f05d4e74c03086b3b45c94995e1059565b8c7b1c4342eb7a00c10b03120132"
+  }
+}

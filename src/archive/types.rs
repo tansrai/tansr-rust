@@ -109,6 +109,8 @@ pub struct Limits {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct Capabilities {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub persistence: Option<crate::serve_persistence::ArchivePersistence>,
     #[serde(rename = "protocol")]
     pub protocol: String,
     #[serde(rename = "availability")]
@@ -139,6 +141,8 @@ pub struct BindingTarget {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct Binding {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub persistence: Option<crate::serve_persistence::ArchivePersistence>,
     #[serde(rename = "protocol")]
     pub protocol: String,
     #[serde(rename = "bindingId")]
@@ -327,6 +331,8 @@ pub struct ArtifactChunk {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct Status {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub persistence: Option<crate::serve_persistence::ArchivePersistence>,
     #[serde(rename = "protocol")]
     pub protocol: String,
     #[serde(rename = "bindingId")]

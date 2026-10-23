@@ -201,6 +201,44 @@ impl SessionClient {
 }
 
 impl Session {
+    /// The host persists this request ID before first send and reuses it for
+    /// reconciliation after a timeout. No hidden retry or replacement key.
+    pub async fn send_with_request_id(
+        &self,
+        prompt: &str,
+        request_id: &str,
+        options: WriteOptions,
+    ) -> Result<Accepted> {
+        crate::serve_persistence::request_id(request_id)?;
+        if prompt.trim().is_empty() {
+            return Err(invalid("prompt must not be blank"));
+        }
+        self.accepted(
+            "session.message.send",
+            None,
+            json!({"prompt":prompt,"requestId":request_id}),
+            options,
+            true,
+        )
+        .await
+    }
+    pub async fn send_blocks_with_request_id(
+        &self,
+        blocks: Vec<Block>,
+        request_id: &str,
+        options: WriteOptions,
+    ) -> Result<Accepted> {
+        crate::serve_persistence::request_id(request_id)?;
+        validate_blocks(&blocks, false)?;
+        self.accepted(
+            "session.message.send",
+            None,
+            json!({"blocks":blocks,"requestId":request_id}),
+            options,
+            true,
+        )
+        .await
+    }
     pub fn id(&self) -> &str {
         &self.created.session_id
     }

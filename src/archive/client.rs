@@ -51,11 +51,17 @@ impl ArchiveClient {
         options.last_event_id = last_event_id;
         let mut stream = self.api.events("archive.events.observe", options).await?;
         let id = binding.binding_id.clone();
+        let persistence = binding.persistence.clone();
         let generations = serde_json::to_value(&binding.target.generations)?;
         Ok(Box::pin(async_stream::try_stream! {
             while let Some(event)=stream.next().await {
                 let event=event?;validate("EventFrame",&event.raw)?;
                 if event.raw.get("bindingId").and_then(|v|v.as_str())!=Some(id.as_str()) || event.raw.get("generations")!=Some(&generations) {Err(integrity())?;}
+                if matches!(event.raw["eventType"].as_str(), Some("archive.status" | "binding.status")) {
+                    let payload = &event.raw["payload"];
+                    crate::serve_persistence::check_archive_value(payload)?;
+                    if payload["bindingId"] != id || payload.get("persistence") != persistence.as_ref().map(serde_json::to_value).transpose()?.as_ref() { Err(integrity())?; }
+                }
                 yield event;
             }
         }))
@@ -73,6 +79,7 @@ impl ArchiveClient {
         }
         let value = result.json()?;
         crate::api::validate_wire(PROTOCOL, definition, &value)?;
+        crate::serve_persistence::check_archive_value(&value)?;
         Ok(serde_json::from_value(value)?)
     }
     pub async fn capabilities(&self) -> Result<Capabilities> {
@@ -112,6 +119,20 @@ impl ArchiveClient {
         verify_epoch(value.operation_epoch.as_ref(), 0)?;
         Ok(value)
     }
+    /// Discover the binding installed by a source-managed Serve. This never
+    /// creates a legacy durable-spool binding or opens a client archive store.
+    pub async fn installed_binding(&self, session_id: &str) -> Result<Binding> {
+        let target = self.binding_target(session_id).await?;
+        let id = target.binding_id.as_deref().ok_or_else(integrity)?;
+        let binding = self.binding(id).await?;
+        if binding.target != target.target
+            || binding.revision != target.revision
+            || binding.operation_epoch != target.operation_epoch
+        {
+            return Err(integrity());
+        }
+        Ok(binding)
+    }
     /// Create once. On a lost response, query `creation_operation` using the
     /// original identity; never substitute a second binding request.
     pub async fn create(
@@ -134,6 +155,9 @@ impl ArchiveClient {
         request_id: &str,
     ) -> Result<BindingCreateRequest> {
         let caps = self.capabilities().await?;
+        if caps.availability == "source-managed" {
+            return Err(integrity());
+        }
         if !has(&caps.capabilities, "archive-transfer-v1")
             || !has(&caps.archive_ack_formats, "split-receipts-v1")
         {

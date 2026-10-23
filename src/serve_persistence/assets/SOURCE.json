@@ -1,0 +1,36 @@
+{
+  "assets": [
+    {
+      "sha256": "54d2d6ec81b6fd2e01344674692d89f52ea245ff8c93de9cc5edd1401124eb4f",
+      "path": "doc/rfc/sdk2-ext-v1.schema.json",
+      "file": "sdk2-ext-v1.schema.json"
+    },
+    {
+      "sha256": "fa72c7f383489f8261aae52abce71818e5a6e1989a43339f25e6f7fba971fdf6",
+      "path": "doc/rfc/unified-v1.schema.json",
+      "file": "unified-v1.schema.json"
+    },
+    {
+      "sha256": "8c84ad5ba1461207dd0d9f11871989aeb8b971f6557c39ca4e06a690e191f9d9",
+      "path": "doc/rfc/persistence-custody-handoff-v1.schema.json",
+      "file": "persistence-custody-handoff-v1.schema.json"
+    },
+    {
+      "sha256": "c9319eb931970c140d88aef6e453c89bf94d65d13f8a1d0d5b51ac731d4333ac",
+      "path": "doc/rfc/persistence-custody-handoff-v1.golden.json",
+      "file": "persistence-custody-handoff-v1.golden.json"
+    },
+    {
+      "sha256": "473da377399137006704538e19e50fa216fc66dc0b269bfe2b851040eef76f8c",
+      "path": "packages/server/contract/api-manifest.json",
+      "file": "api-manifest.json"
+    },
+    {
+      "sha256": "f5ad381edd569847b03d83f3ff6e8b5a8e5cdf99d2f0777b658b8fa02f8b162d",
+      "path": "doc/rfc/unified-v1.golden.json",
+      "file": "unified-v1.golden.json"
+    }
+  ],
+  "purpose": "PST-SERVE-02 additive consumer; original 39 assets retained",
+  "sourceCommit": "d59972fb4892102fb4f4ffd96726641684ace9e4"
+}

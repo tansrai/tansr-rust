@@ -186,6 +186,9 @@ pub enum ToolError {
 }
 #[async_trait]
 pub trait ToolHandler: Send + Sync {
+    fn is_persistence_custody_host(&self) -> bool {
+        false
+    }
     /// Reserved storage profiles require the original execution envelope.
     fn is_memory_publication_host(&self) -> bool {
         false
@@ -230,9 +233,17 @@ pub enum ClaimResult {
     Claimed,
     Pending,
     Receipt(Box<Receipt>),
+    /// A remote claim exists without this attempt's secret. Never settle it or
+    /// execute the handler; only the original holder can complete it.
+    Unowned,
 }
 #[async_trait]
 pub trait Journal: Send + Sync {
+    /// An explicitly discovered independent cloud journal has no local bytes.
+    /// This does not claim that SQL/OSS has any particular encryption at rest.
+    fn independent_cloud_authority(&self) -> bool {
+        false
+    }
     /// True only when durable claims and receipts (including result bodies) are encrypted.
     fn encrypted_at_rest(&self) -> bool {
         false

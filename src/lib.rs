@@ -83,6 +83,7 @@ pub mod archive;
 pub mod canonical;
 pub mod executor;
 pub mod memory_publication;
+pub mod serve_persistence;
 pub mod session;
 pub mod sse;
 mod storage_cipher;

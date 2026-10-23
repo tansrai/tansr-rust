@@ -13,6 +13,8 @@ use std::{
 };
 use tokio::sync::Semaphore;
 use zeroize::{Zeroize, Zeroizing};
+mod custody;
+pub use custody::{CustodyPort, FencedStore};
 const FORMAT: &str = "tansr-rust-terminal-persistence-v1";
 const META_CAP: usize = 16 << 20;
 const RESERVE: usize = 262_144;
@@ -96,6 +98,8 @@ struct Ticket {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct State {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    custody: Option<custody::CustodyState>,
     format: String,
     identity: Identity,
     limits: Limits,
@@ -116,6 +120,7 @@ struct State {
     orphaned: BTreeSet<String>,
 }
 struct Inner {
+    commit_guard: Option<crate::serve_persistence::custody::AssertCurrent>,
     path: PathBuf,
     directory: File,
     _lock: File,
@@ -297,8 +302,15 @@ impl PersistenceStore for FileStore {
     async fn execute(&self, input: Value, owner: Owner) -> Result<Value> {
         validate_request(&input, &self.identity)?;
         owner.validate()?;
-        self.run(move |inner, before| inner.execute(input, owner, before))
-            .await
+        self.run(move |inner, before| {
+            if inner.state.custody.is_some()
+                && matches!(input["action"].as_str(), Some("begin" | "put" | "commit"))
+            {
+                return Err(reject("custody_writer_required"));
+            }
+            inner.execute(input, owner, before)
+        })
+        .await
     }
 }
 impl Inner {
@@ -313,6 +325,9 @@ impl Inner {
         Ok(owner)
     }
     fn check(&self, before: &Owner) -> Result<()> {
+        if let Some(guard) = &self.commit_guard {
+            guard()?;
+        }
         if self.context()? != *before {
             return Err(reject("context_changed"));
         }
@@ -367,6 +382,7 @@ impl Inner {
                 identity: o.identity,
                 limits: o.limits,
                 root: None,
+                custody: None,
                 read_only_copy: false,
                 primary: BTreeMap::new(),
                 secondary: BTreeMap::new(),
@@ -377,6 +393,7 @@ impl Inner {
                 orphaned: BTreeSet::new(),
             },
             context: o.read_context,
+            commit_guard: None,
             recovery: o.authorize_recovery,
             uncertain: false,
             fingerprint: None,
@@ -528,6 +545,7 @@ impl Inner {
         let mut staging_state = state.clone();
         staging_state.read_only_copy = false;
         let mut target = Self {
+            commit_guard: None,
             path: staged_path,
             directory,
             _lock: lock,

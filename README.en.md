@@ -1,5 +1,9 @@
 # Tansr Rust SDK
 
+Current source includes the **PST-SERVE-02 diskless Serve consumer**: explicit terminal or SQL/object-storage cloud custody, original-input queries, cloud execution journals and complete memory-directory handoff. Cloud mode opens no local database. See [the source-candidate guide](doc/guide.md#pst-serve-02-diskless-serve-source-candidate). These additions are not in the published `0.1.0` packages.
+
+The additive profile separately distributes six public JSON assets plus `SOURCE.json`, pinned to `d59972fb` / manifest r17. The original public 20 assets and internal 39-file source lock remain unchanged. Private TypeScript paths/hashes embedded in the manifest are provenance metadata only; public checks do not require private source or recompute private Git bytes.
+
 [中文](README.md) · [Developer guide](doc/guide.md) · [0.1.0 API documentation](https://docs.rs/tansr-sdk/0.1.0/tansr_sdk/) · [Source](https://github.com/tansrai/tansr-rust)
 
 An asynchronous native Rust client for local or remote Tansr Serve, using the unified `/api` contract. Rust applications need no Go, Node, or JavaScript client proxy. Serve owns the agent loop, sessions, context, memory selection, authorization, arbitration, tool orchestration, and usage accounting. The application owns its login, UI, explicitly installed business functions, and encrypted local archive.

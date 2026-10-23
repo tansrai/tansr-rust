@@ -429,3 +429,35 @@ The new schema/golden are separately vendored under
 `src/terminal_persistence/assets` with source hashes. The original 39 locked
 assets and 20-file public legacy distribution are unchanged. Local tests and
 packages do not imply a released crate or new Serve/macOS/Linux execution.
+
+## PST-SERVE-02 diskless Serve (source candidate)
+
+The additive public profile pins CLI `d59972fb4892102fb4f4ffd96726641684ace9e4`, manifest r17, 91 operations. Its JSON and hashes live under `src/serve_persistence/assets`; the original 39 locked assets remain unchanged. Serve owns the core and keeps only bounded working state and TTL memory. Integrated Node/Electron storage is unchanged.
+
+Choose the deployment mode explicitly. `terminal` retains the application's durable encrypted `FileStore` and execution journal. `cloud` uses deployment-owned SQL control facts and object storage; `CloudJournal` requires no local database. Discovery confirms the choice and cannot switch it. Missing capabilities, mismatches and unknown sources fail closed, without a local fallback.
+
+Call `serve_persistence::Client::discover`, then `ArchiveClient::installed_binding` to resolve the preinstalled `bindingTarget`. A `source-managed` binding must include the matching persistence identity; archive status and SSE retain that identity. Do not create another binding or an empty archive as recovery. The read-only example opens no storage and submits no input:
+
+```sh
+cargo run -p tansr-sdk-demo --example diskless -- --session SESSION --persistence cloud --request-id ORIGINAL_ID
+cargo run -p tansr-sdk-demo --bin tansr-archive -- --mode discover --session SESSION
+```
+
+Use `Session::send_with_request_id` or `send_blocks_with_request_id` after initialization and executor binding. Save the stable business input key before sending. A lost response is reconciled with `serve_persistence::Client::input(session, original_id)` or paginated `inputs`; an absent receipt does not prove nonexecution and never authorizes a new key or automatic resend.
+
+Pass `CloudJournal::new(api, executor_id, max_active)` to the existing Runner as `Arc<dyn Journal>`. Only a `granted` claim permits handler IO. The original attempt is reserved before sending; its secret remains bounded RAM only. Lost replies, cancellation, busy claims and cold pending records remain unowned and cannot reexecute. Confirmed terminal facts release slots; unresolved capacity exhaustion fails explicitly until original-key reconciliation. The independent cloud journal does not use the PST medium being written by that same tool as evidence for its execution.
+
+```sh
+cargo run -p tansr-sdk-demo --bin tansr-tools -- --session SESSION --persistence cloud
+cargo run -p tansr-sdk-demo --bin tansr-tools -- --session SESSION --persistence terminal --journal ABSOLUTE_PRIVATE_DIRECTORY
+```
+
+Full custody transfer uses `serve_persistence::custody::{Host, Control, Port, MigrationBudget}` and `terminal_persistence::{CustodyPort, FencedStore}`. The native port preserves the encrypted FileStore format and the complete directory, permanent dual-key receipts and committed/staging transfers. Prepare, export/import pages and chunks, verify, cut over through common authority, then activate. Recover with the original operation/intent. Replaying an already published plan cannot replace a newer root.
+
+`Host::new(port, control, authorize, commit_authorize)` requires async operation/administrative authorization and a synchronous precommit check of the original operation's current identity, revision and administrative permission. The callback must not block or reenter storage. The port checks the original Owner again after its storage queue and before publication. Register only `Host::into_tool()` for the reserved profile. `Control` must use a deployment-owned durable shared CAS authority with authorization checked inside its control transaction; the test's in-memory mock is not a production implementation. Copied JSON, a digest or directory possession is never writer authority. Raw `Port` methods are trusted storage mechanics, not an unauthenticated management API.
+
+After transfer, writes use `FencedStore` with the authority-selected custody and writer fence. Old writers fail. A settled writer claim only reads the original persisted result and checks its response digest; it cannot reconstruct a missing effect by executing again. Missing or different facts remain unknown/error.
+
+Migration limits default to 1 GiB and 1,048,576 objects. Explicit maxima are 1,102,569,742 bytes and 1,310,721 objects. These budgets bound migration proof storage, not business capacity. The original capacity and every directory/object proof are still verified. Over-budget imports preserve the source and do not publish. Interrupted target staging is retained within the bounds for original-plan recovery; unknown files are not automatically deleted.
+
+Focused Windows tests consume a Node-produced complete inventory: 13 pages, 49 chunks, 40 permanent dual-key receipts and two transfers, including native cold reopen, new-writer replay, budgets and revocation. The real Serve HTTP fixture uses synthetic authentication/model and synthetic SQL/object backends. It is not production MySQL/OSS durability evidence. Remote CI, new platform runs and release remain separate; the published 0.1.0 artifacts do not contain this addition.

@@ -48,46 +48,49 @@ fn public_fixture() -> tempfile::TempDir {
 
 #[test]
 fn operation_catalogue_is_generated_and_complete() {
-    let generated = manifest::render(include_bytes!("../contract/api-manifest.json")).unwrap();
+    let generated = manifest::render(include_bytes!(
+        "../src/serve_persistence/assets/api-manifest.json"
+    ))
+    .unwrap();
     assert!(
         generated.as_bytes() == include_bytes!("../src/api/operations.rs"),
         "operation catalogue drift; run cargo run -p xtask -- generate"
     );
     let catalogue = operations();
-    assert_eq!(MANIFEST_REVISION, 7);
+    assert_eq!(MANIFEST_REVISION, 17);
     assert_eq!(
         SCHEMA_HASH,
-        "b60e77ffcbf08d985a993dbdbd4cf610f12f7c7e70f090aee5ff8d523f70bb57"
+        "b792dc53f45ca2b8fdc8438bd5b50d6d6c8a3eb08ac29920215d75a470349faf"
     );
-    assert_eq!(catalogue.len(), 81);
+    assert_eq!(catalogue.len(), 91);
     assert_eq!(
         catalogue
             .iter()
             .map(|operation| operation.name)
             .collect::<BTreeSet<_>>()
             .len(),
-        81
+        91
     );
     assert_eq!(
         catalogue
             .iter()
             .filter(|operation| operation.fenced)
             .count(),
-        77
+        87
     );
     assert_eq!(
         catalogue
             .iter()
             .filter(|operation| operation.kind == "read")
             .count(),
-        39
+        46
     );
     assert_eq!(
         catalogue
             .iter()
             .filter(|operation| operation.kind == "write")
             .count(),
-        38
+        41
     );
     assert_eq!(
         catalogue.iter().filter(|operation| operation.sse).count(),
@@ -110,9 +113,17 @@ fn operation_catalogue_is_generated_and_complete() {
 fn generator_rejects_protocol_drift_and_check_does_not_rewrite() {
     let root = tempfile::tempdir().unwrap();
     fs::create_dir_all(root.path().join("src/api")).unwrap();
-    fs::create_dir(root.path().join("contract")).unwrap();
-    let source = include_bytes!("../contract/api-manifest.json");
-    fs::write(root.path().join("contract/api-manifest.json"), source).unwrap();
+    let asset_path = "src/serve_persistence/assets";
+    fs::create_dir_all(root.path().join(asset_path)).unwrap();
+    for entry in fs::read_dir(Path::new(env!("CARGO_MANIFEST_DIR")).join(asset_path)).unwrap() {
+        let entry = entry.unwrap();
+        fs::copy(
+            entry.path(),
+            root.path().join(asset_path).join(entry.file_name()),
+        )
+        .unwrap();
+    }
+    let source = include_bytes!("../src/serve_persistence/assets/api-manifest.json");
     manifest::generate(root.path(), false).unwrap();
     manifest::generate(root.path(), true).unwrap();
     fs::write(root.path().join("src/api/operations.rs"), "changed").unwrap();

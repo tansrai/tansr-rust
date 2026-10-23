@@ -53,11 +53,13 @@ impl Identity {
     pub fn from_binding(binding: &Binding, status: &Status) -> Result<Self> {
         client::verify_binding(binding)?;
         validate("ArchiveStatus", status)?;
+        crate::serve_persistence::check_archive_value(&serde_json::to_value(status)?)?;
         if binding.binding_id != status.binding_id
             || binding.source_id != status.source_id
             || binding.target.generations != status.generations
             || binding.revision != status.revision
             || binding.state != status.state
+            || binding.persistence != status.persistence
             || binding.state == "closed"
         {
             return Err(integrity());

@@ -1,0 +1,2702 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tansr.com/contracts/persistence-custody-handoff-v1/2026-10-21.v1",
+  "title": "PST-SERVE-01 显式可选的同逻辑域托管交接",
+  "description": "已会签2026-10-21。原PST业务状态、五字段身份、根与永久回执不变；经MemoryPublication受控执行。未知能力不启用。HTTP仅发现和原键query，写者认领/结算与迁移只能由受信控制权威准入，不接受终端自报授权。",
+  "x-wire-limits": {
+    "maxControlBytes": 32768,
+    "maxObjectChunkBytes": 12288,
+    "maxPageRecords": 32
+  },
+  "definitions": {
+    "Identity": {
+      "type": "object",
+      "properties": {
+        "applicationScopeId": {
+          "$ref": "#/definitions/Id"
+        },
+        "endUserId": {
+          "$ref": "#/definitions/LegacyId"
+        },
+        "sourceId": {
+          "$ref": "#/definitions/MemoryIdentifier"
+        },
+        "sourceGeneration": {
+          "$ref": "#/definitions/Sequence"
+        },
+        "domainKey": {
+          "$ref": "#/definitions/MemoryIdentifier"
+        }
+      },
+      "required": [
+        "applicationScopeId",
+        "endUserId",
+        "sourceId",
+        "sourceGeneration",
+        "domainKey"
+      ],
+      "additionalProperties": false
+    },
+    "Id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._~-]*$"
+    },
+    "LegacyId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512,
+      "description": "Existing opaque ID; no trimming, case folding or Unicode normalization. Do not mint authority from this string."
+    },
+    "MemoryIdentifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+    },
+    "Sequence": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+      "maxLength": 19,
+      "description": "Canonical unsigned decimal 0..2^63-1. Never parse through IEEE754 Number."
+    },
+    "Root": {
+      "type": "object",
+      "properties": {
+        "commitRoot": {
+          "$ref": "#/definitions/Digest"
+        },
+        "generation": {
+          "$ref": "#/definitions/Sequence"
+        },
+        "body": {
+          "$ref": "#/definitions/BodyPlan"
+        },
+        "index": {
+          "$ref": "#/definitions/IndexRoot"
+        }
+      },
+      "required": [
+        "commitRoot",
+        "generation",
+        "body",
+        "index"
+      ],
+      "additionalProperties": false
+    },
+    "Digest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "BodyPlan": {
+      "type": "object",
+      "properties": {
+        "byteLength": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4194304
+        },
+        "sha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "blockCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 342
+        },
+        "pageHashes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Digest"
+          },
+          "minItems": 0,
+          "maxItems": 6
+        }
+      },
+      "required": [
+        "byteLength",
+        "sha256",
+        "blockCount",
+        "pageHashes"
+      ],
+      "additionalProperties": false
+    },
+    "IndexRoot": {
+      "type": "object",
+      "properties": {
+        "root": {
+          "$ref": "#/definitions/Digest"
+        },
+        "count": {
+          "$ref": "#/definitions/Sequence"
+        }
+      },
+      "required": [
+        "root",
+        "count"
+      ],
+      "additionalProperties": false
+    },
+    "CapacityLimits": {
+      "type": "object",
+      "properties": {
+        "activeTransfers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32
+        },
+        "stagingBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 67108864
+        },
+        "receiptEntries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "transferFacts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 262144
+        },
+        "objects": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "retainedBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1073741824
+        }
+      },
+      "required": [
+        "activeTransfers",
+        "stagingBytes",
+        "receiptEntries",
+        "transferFacts",
+        "objects",
+        "retainedBytes"
+      ],
+      "additionalProperties": false
+    },
+    "CapacityUsed": {
+      "type": "object",
+      "properties": {
+        "activeTransfers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 32
+        },
+        "stagingBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 67108864
+        },
+        "receiptEntries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "transferFacts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 262144
+        },
+        "objects": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "retainedBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1073741824
+        },
+        "reservedBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1073741824
+        },
+        "reservedObjects": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "reservedReceiptEntries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        }
+      },
+      "required": [
+        "activeTransfers",
+        "stagingBytes",
+        "receiptEntries",
+        "transferFacts",
+        "objects",
+        "retainedBytes",
+        "reservedBytes",
+        "reservedObjects",
+        "reservedReceiptEntries"
+      ],
+      "additionalProperties": false
+    },
+    "Entry": {
+      "type": "object",
+      "properties": {
+        "primaryKey": {
+          "$ref": "#/definitions/Digest"
+        },
+        "secondaryKey": {
+          "$ref": "#/definitions/Digest"
+        },
+        "value": {
+          "$ref": "#/definitions/Ref"
+        }
+      },
+      "required": [
+        "primaryKey",
+        "secondaryKey",
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    "Ref": {
+      "type": "object",
+      "properties": {
+        "sha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12288
+        }
+      },
+      "required": [
+        "sha256",
+        "byteLength"
+      ],
+      "additionalProperties": false
+    },
+    "BeginRequest": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/OriginalContract"
+        },
+        "sourceId": {
+          "$ref": "#/definitions/MemoryIdentifier"
+        },
+        "sourceGeneration": {
+          "$ref": "#/definitions/Sequence"
+        },
+        "domainKey": {
+          "$ref": "#/definitions/MemoryIdentifier"
+        },
+        "action": {
+          "const": "begin"
+        },
+        "transferId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "expected": {
+          "$ref": "#/definitions/Expected"
+        },
+        "body": {
+          "$ref": "#/definitions/BodyPlan"
+        },
+        "index": {
+          "$ref": "#/definitions/IndexPlan"
+        },
+        "declared": {
+          "$ref": "#/definitions/Declared"
+        }
+      },
+      "required": [
+        "contract",
+        "sourceId",
+        "sourceGeneration",
+        "domainKey",
+        "action",
+        "transferId",
+        "intentSha256",
+        "expected",
+        "body",
+        "index",
+        "declared"
+      ],
+      "additionalProperties": false
+    },
+    "Contract": {
+      "const": "persistence-custody-handoff-v1"
+    },
+    "Expected": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "commitRoot": {
+              "$ref": "#/definitions/Digest"
+            },
+            "generation": {
+              "$ref": "#/definitions/Sequence"
+            },
+            "bodyEtag": {
+              "$ref": "#/definitions/Digest"
+            },
+            "indexRoot": {
+              "$ref": "#/definitions/Digest"
+            },
+            "indexCount": {
+              "$ref": "#/definitions/Sequence"
+            }
+          },
+          "required": [
+            "commitRoot",
+            "generation",
+            "bodyEtag",
+            "indexRoot",
+            "indexCount"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "IndexPlan": {
+      "type": "object",
+      "properties": {
+        "entryCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256
+        },
+        "addedCount": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 256
+        },
+        "pageHashes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Digest"
+          },
+          "minItems": 0,
+          "maxItems": 8
+        }
+      },
+      "required": [
+        "entryCount",
+        "addedCount",
+        "pageHashes"
+      ],
+      "additionalProperties": false
+    },
+    "Declared": {
+      "type": "object",
+      "properties": {
+        "objects": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 612
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8388608
+        }
+      },
+      "required": [
+        "objects",
+        "bytes"
+      ],
+      "additionalProperties": false
+    },
+    "Owner": {
+      "type": "object",
+      "properties": {
+        "scope": {
+          "$ref": "#/definitions/Scope"
+        },
+        "sessionId": {
+          "$ref": "#/definitions/LegacyId"
+        },
+        "binding": {
+          "$ref": "#/definitions/ExecutionBinding"
+        }
+      },
+      "required": [
+        "scope",
+        "sessionId",
+        "binding"
+      ],
+      "additionalProperties": false
+    },
+    "Scope": {
+      "type": "object",
+      "properties": {
+        "applicationScopeId": {
+          "$ref": "#/definitions/Id"
+        },
+        "endUserId": {
+          "$ref": "#/definitions/LegacyId"
+        },
+        "authorizationRevision": {
+          "$ref": "#/definitions/Sequence"
+        }
+      },
+      "required": [
+        "applicationScopeId",
+        "endUserId",
+        "authorizationRevision"
+      ],
+      "additionalProperties": false,
+      "$comment": "Response/host-adapter only. Client requests have no Scope field. Reauthenticate and authorize every operation; archive roles never imply approve or execute."
+    },
+    "ExecutionBinding": {
+      "type": "object",
+      "properties": {
+        "bindingId": {
+          "$ref": "#/definitions/Id"
+        },
+        "revision": {
+          "$ref": "#/definitions/Sequence"
+        },
+        "target": {
+          "$ref": "#/definitions/ExecutionTarget"
+        }
+      },
+      "required": [
+        "bindingId",
+        "revision",
+        "target"
+      ],
+      "additionalProperties": false
+    },
+    "ExecutionTarget": {
+      "type": "object",
+      "properties": {
+        "executorId": {
+          "$ref": "#/definitions/Id"
+        },
+        "connectionId": {
+          "$ref": "#/definitions/Id"
+        },
+        "connectionRevision": {
+          "$ref": "#/definitions/Sequence"
+        },
+        "workspaceId": {
+          "$ref": "#/definitions/Id"
+        },
+        "workspaceRevision": {
+          "$ref": "#/definitions/Sequence"
+        },
+        "interpreter": {
+          "$ref": "#/definitions/ExecutionInterpreter"
+        }
+      },
+      "required": [
+        "executorId",
+        "connectionId",
+        "connectionRevision",
+        "workspaceId",
+        "workspaceRevision"
+      ],
+      "additionalProperties": false
+    },
+    "ExecutionInterpreter": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/Id"
+        },
+        "revision": {
+          "$ref": "#/definitions/Id"
+        },
+        "hostShell": {
+          "enum": [
+            "posix",
+            "powershell"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "revision",
+        "hostShell"
+      ],
+      "additionalProperties": false
+    },
+    "Transfer": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/UnknownTransfer"
+        },
+        {
+          "$ref": "#/definitions/StagingTransfer"
+        },
+        {
+          "$ref": "#/definitions/CommittedTransfer"
+        },
+        {
+          "$ref": "#/definitions/RejectedTransfer"
+        }
+      ]
+    },
+    "UnknownTransfer": {
+      "type": "object",
+      "properties": {
+        "transferId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "status": {
+          "const": "unknown"
+        },
+        "progress": {
+          "type": "null"
+        },
+        "result": {
+          "type": "null"
+        },
+        "rejection": {
+          "type": "null"
+        }
+      },
+      "required": [
+        "transferId",
+        "intentSha256",
+        "status",
+        "progress",
+        "result",
+        "rejection"
+      ],
+      "additionalProperties": false
+    },
+    "StagingTransfer": {
+      "type": "object",
+      "properties": {
+        "transferId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "status": {
+          "const": "staging"
+        },
+        "progress": {
+          "$ref": "#/definitions/Progress"
+        },
+        "result": {
+          "type": "null"
+        },
+        "rejection": {
+          "type": "null"
+        }
+      },
+      "required": [
+        "transferId",
+        "intentSha256",
+        "status",
+        "progress",
+        "result",
+        "rejection"
+      ],
+      "additionalProperties": false
+    },
+    "Progress": {
+      "type": "object",
+      "properties": {
+        "pagesReady": {
+          "type": "string",
+          "maxLength": 4,
+          "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/][AQgw]==|[A-Za-z0-9+/]{2}[AEIMQUYcgkosw048]=)?$"
+        },
+        "bodyReady": {
+          "type": "string",
+          "maxLength": 60,
+          "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/][AQgw]==|[A-Za-z0-9+/]{2}[AEIMQUYcgkosw048]=)?$"
+        },
+        "valuesReady": {
+          "type": "string",
+          "maxLength": 44,
+          "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/][AQgw]==|[A-Za-z0-9+/]{2}[AEIMQUYcgkosw048]=)?$"
+        },
+        "receivedBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8388608
+        }
+      },
+      "required": [
+        "pagesReady",
+        "bodyReady",
+        "valuesReady",
+        "receivedBytes"
+      ],
+      "additionalProperties": false
+    },
+    "CommittedTransfer": {
+      "type": "object",
+      "properties": {
+        "transferId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "status": {
+          "const": "committed"
+        },
+        "progress": {
+          "type": "null"
+        },
+        "result": {
+          "$ref": "#/definitions/Root"
+        },
+        "rejection": {
+          "type": "null"
+        }
+      },
+      "required": [
+        "transferId",
+        "intentSha256",
+        "status",
+        "progress",
+        "result",
+        "rejection"
+      ],
+      "additionalProperties": false
+    },
+    "RejectedTransfer": {
+      "type": "object",
+      "properties": {
+        "transferId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "status": {
+          "const": "rejected"
+        },
+        "progress": {
+          "type": "null"
+        },
+        "result": {
+          "type": "null"
+        },
+        "rejection": {
+          "$ref": "#/definitions/Rejection"
+        }
+      },
+      "required": [
+        "transferId",
+        "intentSha256",
+        "status",
+        "progress",
+        "result",
+        "rejection"
+      ],
+      "additionalProperties": false
+    },
+    "Rejection": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "enum": [
+            "revision_conflict",
+            "request_conflict",
+            "invalid_request",
+            "integrity_mismatch"
+          ]
+        },
+        "observedRoot": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Root"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "observedRoot"
+      ],
+      "additionalProperties": false
+    },
+    "OriginalContract": {
+      "const": "terminal-persistence-v1"
+    },
+    "SchemaRevision": {
+      "const": "2026-10-21.v1"
+    },
+    "Capability": {
+      "const": "persistence-custody-handoff-v1"
+    },
+    "Limits": {
+      "type": "object",
+      "properties": {
+        "maxControlBytes": {
+          "const": 32768
+        },
+        "maxObjectChunkBytes": {
+          "const": 12288
+        },
+        "maxPageRecords": {
+          "const": 32
+        },
+        "maxReceiptEntries": {
+          "const": 1048576
+        },
+        "maxTransferFacts": {
+          "const": 262144
+        },
+        "maxRetainedBytes": {
+          "const": 1073741824
+        },
+        "maxTransferMetadataBytes": {
+          "const": 524288
+        }
+      },
+      "required": [
+        "maxControlBytes",
+        "maxObjectChunkBytes",
+        "maxPageRecords",
+        "maxReceiptEntries",
+        "maxTransferFacts",
+        "maxRetainedBytes",
+        "maxTransferMetadataBytes"
+      ],
+      "additionalProperties": false
+    },
+    "Mode": {
+      "type": "string",
+      "enum": [
+        "terminal",
+        "cloud"
+      ]
+    },
+    "Custody": {
+      "type": "object",
+      "properties": {
+        "custodyId": {
+          "$ref": "#/definitions/Id"
+        },
+        "custodyRevision": {
+          "$ref": "#/definitions/Sequence"
+        },
+        "mode": {
+          "$ref": "#/definitions/Mode"
+        }
+      },
+      "required": [
+        "custodyId",
+        "custodyRevision",
+        "mode"
+      ],
+      "additionalProperties": false
+    },
+    "Destination": {
+      "type": "object",
+      "properties": {
+        "custodyId": {
+          "$ref": "#/definitions/Id"
+        },
+        "mode": {
+          "$ref": "#/definitions/Mode"
+        }
+      },
+      "required": [
+        "custodyId",
+        "mode"
+      ],
+      "additionalProperties": false
+    },
+    "ObjectKind": {
+      "type": "string",
+      "enum": [
+        "body-block",
+        "body-page",
+        "index-page",
+        "receipt-value",
+        "custody-control",
+        "custody-transfer",
+        "legacy-control",
+        "legacy-file"
+      ]
+    },
+    "ObjectRef": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/definitions/ObjectKind"
+        },
+        "sha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1073741824
+        }
+      },
+      "required": [
+        "kind",
+        "sha256",
+        "byteLength"
+      ],
+      "additionalProperties": false
+    },
+    "ControlState": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "const": "terminal-persistence-control-v1"
+        },
+        "capacity": {
+          "$ref": "#/definitions/CapacityUsed"
+        },
+        "limits": {
+          "$ref": "#/definitions/CapacityLimits"
+        }
+      },
+      "required": [
+        "format",
+        "capacity",
+        "limits"
+      ],
+      "additionalProperties": false
+    },
+    "TransferObject": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "body-block",
+            "body-page",
+            "index-page",
+            "receipt-value"
+          ]
+        },
+        "sha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 12288
+        }
+      },
+      "required": [
+        "kind",
+        "sha256",
+        "byteLength"
+      ],
+      "additionalProperties": false
+    },
+    "TransferObjects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/TransferObject"
+      },
+      "minItems": 0,
+      "maxItems": 1048576
+    },
+    "PersistedTransfer": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/StagingTransfer"
+        },
+        {
+          "$ref": "#/definitions/CommittedTransfer"
+        },
+        {
+          "$ref": "#/definitions/RejectedTransfer"
+        }
+      ]
+    },
+    "TransferMetadata": {
+      "type": "object",
+      "properties": {
+        "begin": {
+          "$ref": "#/definitions/BeginRequest"
+        },
+        "owner": {
+          "$ref": "#/definitions/Owner"
+        },
+        "baseRoot": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Root"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "transfer": {
+          "$ref": "#/definitions/PersistedTransfer"
+        },
+        "received": {
+          "$ref": "#/definitions/TransferObjects"
+        },
+        "reused": {
+          "$ref": "#/definitions/TransferObjects"
+        },
+        "reservedBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1073741824
+        },
+        "reservedObjects": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "reservedEntries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1048576
+        },
+        "stagingBytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 67108864
+        }
+      },
+      "required": [
+        "begin",
+        "owner",
+        "baseRoot",
+        "transfer",
+        "received",
+        "reused",
+        "reservedBytes",
+        "reservedObjects",
+        "reservedEntries",
+        "stagingBytes"
+      ],
+      "additionalProperties": false
+    },
+    "RootRecord": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "root"
+        },
+        "root": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Root"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "controlRef": {
+          "$ref": "#/definitions/ObjectRef"
+        }
+      },
+      "required": [
+        "kind",
+        "root",
+        "controlRef"
+      ],
+      "additionalProperties": false
+    },
+    "ReceiptIndexRecord": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "receipt-index"
+        },
+        "ordinal": {
+          "$ref": "#/definitions/Sequence"
+        },
+        "entry": {
+          "$ref": "#/definitions/Entry"
+        }
+      },
+      "required": [
+        "kind",
+        "ordinal",
+        "entry"
+      ],
+      "additionalProperties": false
+    },
+    "TransferRecord": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "transfer"
+        },
+        "transferId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "staging",
+            "committed",
+            "rejected"
+          ]
+        },
+        "metadataRef": {
+          "$ref": "#/definitions/ObjectRef"
+        }
+      },
+      "required": [
+        "kind",
+        "transferId",
+        "intentSha256",
+        "status",
+        "metadataRef"
+      ],
+      "additionalProperties": false
+    },
+    "ObjectRecord": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "object"
+        },
+        "object": {
+          "$ref": "#/definitions/ObjectRef"
+        }
+      },
+      "required": [
+        "kind",
+        "object"
+      ],
+      "additionalProperties": false
+    },
+    "LegacyDomain": {
+      "type": "string",
+      "enum": [
+        "session",
+        "commands",
+        "budget",
+        "events",
+        "capture",
+        "rollback",
+        "deletion"
+      ]
+    },
+    "LegacyCodec": {
+      "type": "string",
+      "enum": [
+        "tansr-journal-v1",
+        "sdk2-host-commands-v1",
+        "sdk2-host-budget-v1",
+        "sdk2-events-v1",
+        "sdk2-spool-v1",
+        "sdk2-spool-v2",
+        "sdk2-offload-rollback-v1"
+      ]
+    },
+    "LegacyFileRole": {
+      "type": "string",
+      "enum": [
+        "session-meta",
+        "journal",
+        "manifest",
+        "segment",
+        "attachment",
+        "checkpoint",
+        "family-contract",
+        "session-index",
+        "rollback-import",
+        "commands-database",
+        "budget-database",
+        "events-database",
+        "capture-database",
+        "rollback-receipt",
+        "deletion-tombstone"
+      ]
+    },
+    "LegacyTable": {
+      "type": "string",
+      "enum": [
+        "meta",
+        "journal",
+        "manifest",
+        "segment",
+        "attachment",
+        "checkpoint",
+        "host_command_meta",
+        "host_command",
+        "budget_meta",
+        "budget_catalog",
+        "budget_claim",
+        "budget_counter",
+        "budget_claim_physical",
+        "event_meta",
+        "event_stream",
+        "event_row",
+        "spool_meta",
+        "capture_ops",
+        "entries",
+        "holds",
+        "rollback",
+        "tombstone"
+      ]
+    },
+    "LegacySqlCell": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "text"
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            }
+          },
+          "required": [
+            "type",
+            "value"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "integer"
+            },
+            "decimal": {
+              "type": "string",
+              "pattern": "^(?:0|-?[1-9][0-9]*)$",
+              "maxLength": 20
+            }
+          },
+          "required": [
+            "type",
+            "decimal"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "blob"
+            },
+            "base64": {
+              "type": "string",
+              "maxLength": 1368,
+              "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
+            }
+          },
+          "required": [
+            "type",
+            "base64"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "null"
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "LegacyControlRecord": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "legacy-control"
+        },
+        "domain": {
+          "$ref": "#/definitions/LegacyDomain"
+        },
+        "codec": {
+          "$ref": "#/definitions/LegacyCodec"
+        },
+        "relativePath": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "table": {
+          "$ref": "#/definitions/LegacyTable"
+        },
+        "originalKey": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LegacySqlCell"
+          },
+          "minItems": 1,
+          "maxItems": 8
+        },
+        "originalDigest": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state": {
+          "type": "string",
+          "enum": [
+            "settled",
+            "pending",
+            "deleted"
+          ]
+        },
+        "payload": {
+          "$ref": "#/definitions/ObjectRef"
+        }
+      },
+      "required": [
+        "kind",
+        "domain",
+        "codec",
+        "relativePath",
+        "table",
+        "originalKey",
+        "originalDigest",
+        "state",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    "LegacyFileRecord": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "legacy-file"
+        },
+        "role": {
+          "$ref": "#/definitions/LegacyFileRole"
+        },
+        "relativePath": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "payload": {
+          "$ref": "#/definitions/ObjectRef"
+        }
+      },
+      "required": [
+        "kind",
+        "role",
+        "relativePath",
+        "payload"
+      ],
+      "additionalProperties": false
+    },
+    "LegacyRootRecord": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "const": "legacy-root"
+        },
+        "sourceRootId": {
+          "$ref": "#/definitions/Id"
+        },
+        "stopProofId": {
+          "$ref": "#/definitions/Id"
+        },
+        "writerFence": {
+          "$ref": "#/definitions/Sequence"
+        },
+        "inventoryFormat": {
+          "const": "legacy-serve-v1"
+        },
+        "domains": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/LegacyDomain"
+          },
+          "minItems": 1,
+          "maxItems": 7,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "kind",
+        "sourceRootId",
+        "stopProofId",
+        "writerFence",
+        "inventoryFormat",
+        "domains"
+      ],
+      "additionalProperties": false
+    },
+    "Record": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/RootRecord"
+        },
+        {
+          "$ref": "#/definitions/ReceiptIndexRecord"
+        },
+        {
+          "$ref": "#/definitions/TransferRecord"
+        },
+        {
+          "$ref": "#/definitions/ObjectRecord"
+        },
+        {
+          "$ref": "#/definitions/LegacyControlRecord"
+        },
+        {
+          "$ref": "#/definitions/LegacyFileRecord"
+        },
+        {
+          "$ref": "#/definitions/LegacyRootRecord"
+        }
+      ]
+    },
+    "MigrationBudget": {
+      "description": "目的端开发者可信配置，不是wire请求字段；首次受理固定，后续配置不得扩大原操作预算。",
+      "type": "object",
+      "properties": {
+        "bytes": { "type": "integer", "minimum": 0, "maximum": 1102569742 },
+        "objects": { "type": "integer", "minimum": 0, "maximum": 1310721 }
+      },
+      "required": ["bytes", "objects"],
+      "additionalProperties": false
+    },
+    "RootProof": {
+      "type": "object",
+      "properties": {
+        "originFormat": {
+          "type": "string",
+          "enum": [
+            "terminal-persistence-v1",
+            "legacy-serve-v1"
+          ]
+        },
+        "fixedRoot": {
+          "$ref": "#/definitions/Digest"
+        },
+        "originalCommitRoot": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "indexRoot": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "indexCount": {
+          "$ref": "#/definitions/Sequence"
+        },
+        "inventoryDigest": {
+          "$ref": "#/definitions/Digest"
+        },
+        "records": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4194304
+        },
+        "objects": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1310721
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1102569742
+        }
+      },
+      "required": [
+        "originFormat",
+        "fixedRoot",
+        "originalCommitRoot",
+        "indexRoot",
+        "indexCount",
+        "inventoryDigest",
+        "records",
+        "objects",
+        "bytes"
+      ],
+      "additionalProperties": false
+    },
+    "Cursor": {
+      "type": "object",
+      "properties": {
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "fixedRoot": {
+          "$ref": "#/definitions/Digest"
+        },
+        "inventoryDigest": {
+          "$ref": "#/definitions/Digest"
+        },
+        "index": {
+          "$ref": "#/definitions/Sequence"
+        },
+        "previousDigest": {
+          "$ref": "#/definitions/Digest"
+        }
+      },
+      "required": [
+        "operationId",
+        "intentSha256",
+        "fixedRoot",
+        "inventoryDigest",
+        "index",
+        "previousDigest"
+      ],
+      "additionalProperties": false
+    },
+    "Page": {
+      "type": "object",
+      "properties": {
+        "index": {
+          "$ref": "#/definitions/Sequence"
+        },
+        "previousDigest": {
+          "$ref": "#/definitions/Digest"
+        },
+        "sha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "records": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Record"
+          },
+          "minItems": 1,
+          "maxItems": 32
+        },
+        "complete": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "index",
+        "previousDigest",
+        "sha256",
+        "records",
+        "complete"
+      ],
+      "additionalProperties": false
+    },
+    "ObjectChunk": {
+      "type": "object",
+      "properties": {
+        "object": {
+          "$ref": "#/definitions/ObjectRef"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1073741824
+        },
+        "byteLength": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 12288
+        },
+        "base64": {
+          "type": "string",
+          "maxLength": 16384,
+          "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
+        },
+        "payloadDigest": {
+          "$ref": "#/definitions/Digest"
+        }
+      },
+      "required": [
+        "object",
+        "offset",
+        "byteLength",
+        "base64",
+        "payloadDigest"
+      ],
+      "additionalProperties": false
+    },
+    "Phase": {
+      "type": "string",
+      "enum": [
+        "prepared",
+        "staged",
+        "verified",
+        "published",
+        "aborted"
+      ]
+    },
+    "Ticket": {
+      "type": "object",
+      "properties": {
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "phase": {
+          "$ref": "#/definitions/Phase"
+        },
+        "source": {
+          "$ref": "#/definitions/Custody"
+        },
+        "destination": {
+          "$ref": "#/definitions/Destination"
+        },
+        "writerFence": {
+          "$ref": "#/definitions/Sequence"
+        },
+        "proof": {
+          "$ref": "#/definitions/RootProof"
+        },
+        "selectedCustody": {
+          "$ref": "#/definitions/Custody"
+        }
+      },
+      "required": [
+        "operationId",
+        "intentSha256",
+        "identity",
+        "phase",
+        "source",
+        "destination",
+        "writerFence",
+        "proof",
+        "selectedCustody"
+      ],
+      "additionalProperties": false
+    },
+    "WriterClaim": {
+      "type": "object",
+      "properties": {
+        "operationId": {
+          "$ref": "#/definitions/Digest"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "claimId": {
+          "$ref": "#/definitions/Id"
+        },
+        "writerFence": {
+          "$ref": "#/definitions/Sequence"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "active",
+            "unknown",
+            "settled"
+          ]
+        },
+        "selectedCustody": {
+          "$ref": "#/definitions/Custody"
+        },
+        "responseDigest": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "operationId",
+        "intentSha256",
+        "claimId",
+        "writerFence",
+        "status",
+        "selectedCustody",
+        "responseDigest"
+      ],
+      "additionalProperties": false
+    },
+    "WriterSettlement": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "const": "committed"
+            },
+            "responseDigest": {
+              "$ref": "#/definitions/Digest"
+            }
+          },
+          "required": [
+            "state",
+            "responseDigest"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "state": {
+              "const": "rolled-back"
+            }
+          },
+          "required": [
+            "state"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "PrepareRequest": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "prepare"
+        },
+        "source": {
+          "$ref": "#/definitions/Custody"
+        },
+        "destination": {
+          "$ref": "#/definitions/Destination"
+        },
+        "expectedWriterFence": {
+          "$ref": "#/definitions/Sequence"
+        },
+        "expectedRoot": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "source",
+        "destination",
+        "expectedWriterFence",
+        "expectedRoot"
+      ],
+      "additionalProperties": false
+    },
+    "PrepareResponse": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "prepare"
+        },
+        "ticket": {
+          "$ref": "#/definitions/Ticket"
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "ticket"
+      ],
+      "additionalProperties": false
+    },
+    "ExportPageRequest": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "export-page"
+        },
+        "cursor": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Cursor"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "cursor",
+        "limit"
+      ],
+      "additionalProperties": false
+    },
+    "ExportPageResponse": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "export-page"
+        },
+        "proof": {
+          "$ref": "#/definitions/RootProof"
+        },
+        "page": {
+          "$ref": "#/definitions/Page"
+        },
+        "nextCursor": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Cursor"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "proof",
+        "page",
+        "nextCursor"
+      ],
+      "additionalProperties": false
+    },
+    "ExportObjectRequest": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "export-object"
+        },
+        "object": {
+          "$ref": "#/definitions/ObjectRef"
+        },
+        "offset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1073741824
+        },
+        "length": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12288
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "object",
+        "offset",
+        "length"
+      ],
+      "additionalProperties": false
+    },
+    "ExportObjectResponse": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "export-object"
+        },
+        "chunk": {
+          "$ref": "#/definitions/ObjectChunk"
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "chunk"
+      ],
+      "additionalProperties": false
+    },
+    "ImportPageRequest": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "import-page"
+        },
+        "proof": {
+          "$ref": "#/definitions/RootProof"
+        },
+        "page": {
+          "$ref": "#/definitions/Page"
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "proof",
+        "page"
+      ],
+      "additionalProperties": false
+    },
+    "ImportPageResponse": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "import-page"
+        },
+        "ticket": {
+          "$ref": "#/definitions/Ticket"
+        },
+        "pageDigest": {
+          "$ref": "#/definitions/Digest"
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "ticket",
+        "pageDigest"
+      ],
+      "additionalProperties": false
+    },
+    "ImportObjectRequest": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "import-object"
+        },
+        "chunk": {
+          "$ref": "#/definitions/ObjectChunk"
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "chunk"
+      ],
+      "additionalProperties": false
+    },
+    "ImportObjectResponse": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "import-object"
+        },
+        "ticket": {
+          "$ref": "#/definitions/Ticket"
+        },
+        "object": {
+          "$ref": "#/definitions/ObjectRef"
+        },
+        "nextOffset": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1073741824
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "ticket",
+        "object",
+        "nextOffset"
+      ],
+      "additionalProperties": false
+    },
+    "VerifyRequest": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "verify"
+        },
+        "proof": {
+          "$ref": "#/definitions/RootProof"
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "proof"
+      ],
+      "additionalProperties": false
+    },
+    "VerifyResponse": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "verify"
+        },
+        "ticket": {
+          "$ref": "#/definitions/Ticket"
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "ticket"
+      ],
+      "additionalProperties": false
+    },
+    "CutoverRequest": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "cutover"
+        },
+        "proof": {
+          "$ref": "#/definitions/RootProof"
+        },
+        "expectedWriterFence": {
+          "$ref": "#/definitions/Sequence"
+        },
+        "expectedCustodyRevision": {
+          "$ref": "#/definitions/Sequence"
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "proof",
+        "expectedWriterFence",
+        "expectedCustodyRevision"
+      ],
+      "additionalProperties": false
+    },
+    "CutoverResponse": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "cutover"
+        },
+        "ticket": {
+          "$ref": "#/definitions/Ticket"
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "ticket"
+      ],
+      "additionalProperties": false
+    },
+    "QueryRequest": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "query"
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action"
+      ],
+      "additionalProperties": false
+    },
+    "QueryResponse": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "query"
+        },
+        "preparing": {
+          "type": "boolean"
+        },
+        "ticket": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/Ticket"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "preparing",
+        "ticket"
+      ],
+      "additionalProperties": false
+    },
+    "AbortRequest": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "abort"
+        },
+        "expectedWriterFence": {
+          "$ref": "#/definitions/Sequence"
+        },
+        "expectedCustodyRevision": {
+          "$ref": "#/definitions/Sequence"
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "expectedWriterFence",
+        "expectedCustodyRevision"
+      ],
+      "additionalProperties": false
+    },
+    "AbortResponse": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Id"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "abort"
+        },
+        "ticket": {
+          "$ref": "#/definitions/Ticket"
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "ticket"
+      ],
+      "additionalProperties": false
+    },
+    "WriterClaimRequest": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Digest"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "writer-claim"
+        },
+        "custody": {
+          "$ref": "#/definitions/Custody"
+        },
+        "expectedWriterFence": {
+          "$ref": "#/definitions/Sequence"
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "custody",
+        "expectedWriterFence"
+      ],
+      "additionalProperties": false
+    },
+    "WriterClaimResponse": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Digest"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "writer-claim"
+        },
+        "claim": {
+          "$ref": "#/definitions/WriterClaim"
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "claim"
+      ],
+      "additionalProperties": false
+    },
+    "WriterQueryRequest": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Digest"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "writer-query"
+        },
+        "custody": {
+          "$ref": "#/definitions/Custody"
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "custody"
+      ],
+      "additionalProperties": false
+    },
+    "WriterQueryResponse": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Digest"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "writer-query"
+        },
+        "claim": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/WriterClaim"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "claim"
+      ],
+      "additionalProperties": false
+    },
+    "WriterFinishRequest": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Digest"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "writer-finish"
+        },
+        "claimId": {
+          "$ref": "#/definitions/Id"
+        },
+        "custody": {
+          "$ref": "#/definitions/Custody"
+        },
+        "writerFence": {
+          "$ref": "#/definitions/Sequence"
+        },
+        "settlement": {
+          "$ref": "#/definitions/WriterSettlement"
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "claimId",
+        "custody",
+        "writerFence",
+        "settlement"
+      ],
+      "additionalProperties": false
+    },
+    "WriterFinishResponse": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "identity": {
+          "$ref": "#/definitions/Identity"
+        },
+        "operationId": {
+          "$ref": "#/definitions/Digest"
+        },
+        "intentSha256": {
+          "$ref": "#/definitions/Digest"
+        },
+        "action": {
+          "const": "writer-finish"
+        },
+        "claim": {
+          "$ref": "#/definitions/WriterClaim"
+        }
+      },
+      "required": [
+        "contract",
+        "identity",
+        "operationId",
+        "intentSha256",
+        "action",
+        "claim"
+      ],
+      "additionalProperties": false
+    },
+    "Request": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/PrepareRequest"
+        },
+        {
+          "$ref": "#/definitions/ExportPageRequest"
+        },
+        {
+          "$ref": "#/definitions/ExportObjectRequest"
+        },
+        {
+          "$ref": "#/definitions/ImportPageRequest"
+        },
+        {
+          "$ref": "#/definitions/ImportObjectRequest"
+        },
+        {
+          "$ref": "#/definitions/VerifyRequest"
+        },
+        {
+          "$ref": "#/definitions/CutoverRequest"
+        },
+        {
+          "$ref": "#/definitions/QueryRequest"
+        },
+        {
+          "$ref": "#/definitions/AbortRequest"
+        },
+        {
+          "$ref": "#/definitions/WriterClaimRequest"
+        },
+        {
+          "$ref": "#/definitions/WriterQueryRequest"
+        },
+        {
+          "$ref": "#/definitions/WriterFinishRequest"
+        }
+      ]
+    },
+    "Response": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/PrepareResponse"
+        },
+        {
+          "$ref": "#/definitions/ExportPageResponse"
+        },
+        {
+          "$ref": "#/definitions/ExportObjectResponse"
+        },
+        {
+          "$ref": "#/definitions/ImportPageResponse"
+        },
+        {
+          "$ref": "#/definitions/ImportObjectResponse"
+        },
+        {
+          "$ref": "#/definitions/VerifyResponse"
+        },
+        {
+          "$ref": "#/definitions/CutoverResponse"
+        },
+        {
+          "$ref": "#/definitions/QueryResponse"
+        },
+        {
+          "$ref": "#/definitions/AbortResponse"
+        },
+        {
+          "$ref": "#/definitions/WriterClaimResponse"
+        },
+        {
+          "$ref": "#/definitions/WriterQueryResponse"
+        },
+        {
+          "$ref": "#/definitions/WriterFinishResponse"
+        }
+      ]
+    },
+    "CapabilitiesResponse": {
+      "type": "object",
+      "properties": {
+        "contract": {
+          "$ref": "#/definitions/Contract"
+        },
+        "capability": {
+          "$ref": "#/definitions/Capability"
+        },
+        "installed": {
+          "type": "boolean"
+        },
+        "schemaRevision": {
+          "$ref": "#/definitions/SchemaRevision"
+        },
+        "limits": {
+          "$ref": "#/definitions/Limits"
+        },
+        "writerAuthority": {
+          "type": "string",
+          "enum": [
+            "shared-cas",
+            "unavailable"
+          ]
+        }
+      },
+      "required": [
+        "contract",
+        "capability",
+        "installed",
+        "schemaRevision",
+        "limits",
+        "writerAuthority"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

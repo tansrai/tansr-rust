@@ -1,5 +1,9 @@
 # Tansr Rust SDK
 
+当前源码包含 **PST-SERVE-02 双模式无盘 Serve 消费**：显式端侧持久化或 SQL／OSS 云端保管、原输入查询、云执行日志及完整记忆目录交接。云模式不创建本地数据库。见[源码候选指南](doc/使用指南.md#pst-serve-02-双模式无盘-serve源码候选)；新增功能尚未发布到下方 `0.1.0` 制品。
+
+此扩展独立分发 6 份公共 JSON 与 `SOURCE.json`，锁定 `d59972fb`／manifest r17；原公开 20 份合同及内部 39 份来源锁不变。manifest 中未随包分发的私有 TS 路径／哈希只表示出处，公开检查不读取私有源码或复算私有 Git 字节。
+
 [English](README.en.md) · [开发指南](doc/使用指南.md) · [0.1.0 API 文档](https://docs.rs/tansr-sdk/0.1.0/tansr_sdk/) · [源码](https://github.com/tansrai/tansr-rust)
 
 原生异步 Rust SDK，通过统一 `/api` 连接本地或远程 Tansr Serve。客户端无需 Go、Node 或 JavaScript 代理；Serve 独立提供智能体循环、会话、上下文、记忆选材、权限裁决、工具调度和用量管理。Rust 应用管理自己的登录、界面、显式业务工具和本地加密档案。

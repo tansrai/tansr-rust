@@ -16,6 +16,9 @@ use tokio::{
 
 #[derive(Default)]
 struct RemoteState {
+    cloud_record: Option<Value>,
+    cloud_claim_lost: bool,
+    cloud_completions: usize,
     operation: Option<Operation>,
     substitute: Option<Operation>,
     receipt: Option<Receipt>,
@@ -98,6 +101,42 @@ impl Remote {
                             if terminal { "terminal" } else { "execution" },
                             json!({"error":{"code":"forbidden","message":"synthetic denial","retryAction":"do_not_retry"}}),
                         )
+                    } else if route.contains("/persistence ") {
+                        (
+                            200,
+                            "session",
+                            json!({"contract":"serve-persistence-v1","sessionId":"session","mode":"cloud","sourceId":"cloud","sourceGeneration":"1","coverage":["executions"],"handoff":{"archive":"cloud-immutable-publish","trustedControl":true,"executionJournal":true,"inputReceipts":false},"localDisk":false}),
+                        )
+                    } else if route.contains("/journal") {
+                        assert!(!headers.to_ascii_lowercase().contains("idempotency-key:"));
+                        let input: Value = if len > 0 {
+                            serde_json::from_slice(&bytes[boundary..boundary + len]).unwrap()
+                        } else {
+                            Value::Null
+                        };
+                        let response = if route.contains("/journal/claim") {
+                            if let Some(record) = &s.cloud_record {
+                                json!({"protocol":PROTOCOL,"disposition":if record["status"]=="pending"{"busy"}else{"completed"},"record":record})
+                            } else {
+                                let record = json!({"operation":s.operation,"attemptId":input["attemptId"],"connectionId":"connection","status":"pending","receipt":null});
+                                s.cloud_record = Some(record.clone());
+                                json!({"protocol":PROTOCOL,"disposition":"granted","record":record,"claimToken":"A".repeat(43)})
+                            }
+                        } else if route.contains("/journal/complete") {
+                            assert_eq!(input["claimToken"], "A".repeat(43));
+                            let record = s.cloud_record.as_mut().unwrap();
+                            assert_eq!(record["attemptId"], input["attemptId"]);
+                            record["status"] = input["receipt"]["status"].clone();
+                            record["receipt"] = input["receipt"].clone();
+                            let record = record.clone();
+                            s.cloud_completions += 1;
+                            json!({"protocol":PROTOCOL,"record":record})
+                        } else if route.contains("/journal?") {
+                            json!({"protocol":PROTOCOL,"records":s.cloud_record.clone().into_iter().collect::<Vec<_>>(),"nextCursor":null})
+                        } else {
+                            json!({"protocol":PROTOCOL,"record":s.cloud_record})
+                        };
+                        (200, "execution", response)
                     } else if route.contains("/tool-output-status")
                         || route.contains("/output-batches")
                     {
@@ -189,6 +228,10 @@ impl Remote {
                 };
                 if stall {
                     tokio::time::sleep(Duration::from_secs(3)).await;
+                }
+                if route.contains("/journal/claim") && shared.lock().unwrap().cloud_claim_lost {
+                    shared.lock().unwrap().cloud_claim_lost = false;
+                    continue;
                 }
                 let body = serde_json::to_vec(&response).unwrap();
                 let head = format!(
@@ -372,6 +415,146 @@ fn auth() -> Arc<dyn Authorizer> {
         calls: AtomicUsize::new(0),
         reject_at: usize::MAX,
     })
+}
+
+#[tokio::test]
+async fn cloud_journal_runner_grants_once_and_lost_claim_never_reexecutes() {
+    let remote = Remote::new();
+    let calls = Arc::new(AtomicUsize::new(0));
+    let cloud = CloudJournal::new(remote.api.clone(), "device", 2).unwrap();
+    let make_runner = |journal: Arc<dyn Journal>| {
+        Runner::with_connection(
+            RunnerOptions {
+                client: Client::new(remote.api.clone(), scope()).unwrap(),
+                registration: registration(),
+                journal,
+                tools: BTreeMap::from([(
+                    "Lookup".into(),
+                    Tool::new(
+                        "a".repeat(64),
+                        Handler {
+                            calls: calls.clone(),
+                            mode: 0,
+                        },
+                    ),
+                )]),
+                authorize: auth(),
+                poll_interval: Duration::from_millis(10),
+                terminal: None,
+                require_output: false,
+                restricted_status: false,
+            },
+            connection(),
+        )
+        .unwrap()
+    };
+    let first = make_runner(cloud.clone());
+    let op = operation();
+    remote.state.lock().unwrap().operation = Some(op.clone());
+    let receipt = first
+        .execute(op.clone(), CancellationToken::new())
+        .await
+        .unwrap();
+    assert_eq!(receipt.status, "completed");
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    let restarted = CloudJournal::new(remote.api.clone(), "device", 2).unwrap();
+    let second = make_runner(restarted.clone());
+    assert_eq!(
+        second
+            .execute(op.clone(), CancellationToken::new())
+            .await
+            .unwrap(),
+        receipt
+    );
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    assert_eq!(remote.state.lock().unwrap().cloud_completions, 1);
+    assert_eq!(
+        restarted
+            .read("connection", &op.operation_id)
+            .await
+            .unwrap()
+            .unwrap()
+            .receipt,
+        Some(receipt)
+    );
+    assert_eq!(
+        restarted
+            .list("connection", Some("session"), None, 10)
+            .await
+            .unwrap()
+            .0
+            .len(),
+        1
+    );
+    let mut next = operation();
+    next.operation_id = "next-operation".into();
+    next.digest = operation_digest(&next).unwrap();
+    {
+        let mut state = remote.state.lock().unwrap();
+        state.operation = Some(next.clone());
+        state.cloud_record = None;
+        state.cloud_claim_lost = true;
+    }
+    let claims_before = remote
+        .state
+        .lock()
+        .unwrap()
+        .requests
+        .iter()
+        .filter(|r| r.contains("/journal/claim"))
+        .count();
+    assert!(
+        first
+            .execute(next.clone(), CancellationToken::new())
+            .await
+            .is_err()
+    );
+    assert!(
+        second
+            .execute(next.clone(), CancellationToken::new())
+            .await
+            .is_err()
+    );
+    assert!(
+        first
+            .execute(next.clone(), CancellationToken::new())
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        remote
+            .state
+            .lock()
+            .unwrap()
+            .requests
+            .iter()
+            .filter(|r| r.contains("/journal/claim"))
+            .count(),
+        claims_before + 1,
+        "lost claim is reconciled by original-key reads, never a new attempt"
+    );
+    assert_eq!(calls.load(Ordering::SeqCst), 1);
+    assert_eq!(remote.state.lock().unwrap().cloud_completions, 1);
+    let unknown = Receipt {
+        protocol: PROTOCOL.into(),
+        executor_id: "device".into(),
+        connection_id: "connection".into(),
+        operation_id: next.operation_id.clone(),
+        digest: next.digest.clone(),
+        status: "unknown".into(),
+        result: None,
+        error_code: Some("execution_outcome_unknown".into()),
+    };
+    assert!(restarted.complete(&next, &unknown).await.is_err());
+    assert_eq!(
+        restarted
+            .read("connection", &next.operation_id)
+            .await
+            .unwrap()
+            .unwrap()
+            .status,
+        "pending"
+    );
 }
 fn journal(dir: &tempfile::TempDir) -> Arc<FileJournal> {
     Arc::new(FileJournal::open(private_journal_path(dir)).unwrap())

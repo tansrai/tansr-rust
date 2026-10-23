@@ -110,3 +110,7 @@ trusted binding config, encrypted execution journal, original-operation
 reconciliation and draining close as memory_publication, but a new storage
 layout. It neither migrates nor silently upgrades the legacy medium. See the
 SDK guide for quotas, original-key recovery and local retirement boundaries.
+
+PST-SERVE-02 源码候选（尚未发行）：`tansr-tools --persistence cloud` 使用独立云 journal，不传 `--journal`；`--persistence terminal --journal ABSOLUTE_PRIVATE_DIRECTORY` 保留端侧恢复。模式必须与 Serve 发现结果一致，`legacy` 仅保留原接口行为，不是缺能力时的兜底。`tansr-archive --mode discover --session ID` 读取预装来源绑定，不建空库。`cargo run -p tansr-sdk-demo --example diskless -- --session ID --persistence cloud --request-id ORIGINAL_ID` 只查询模式和原输入，失回不重发。
+
+PST-SERVE-02 source candidate (unreleased): tools explicitly selects cloud or terminal journals; cloud rejects `--journal` and opens no local database. The archive discovery command and `diskless` example only resolve preinstalled bindings and original input receipts. They do not create a new binding, claim writer authority or resend an unknown input. Full custody and commit-authorization wiring are documented in the SDK guides.

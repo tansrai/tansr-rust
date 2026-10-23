@@ -4,7 +4,10 @@ use tansr_sdk::api::schema::{validate, validate_family};
 fn materialize(vector: &Value, vectors: &[Value]) -> Value {
     if let Some(file) = vector["valueFile"].as_str() {
         assert_eq!(file, "packages/server/contract/api-manifest.json");
-        return serde_json::from_str(include_str!("../contract/api-manifest.json")).unwrap();
+        return serde_json::from_str(include_str!(
+            "../src/serve_persistence/assets/api-manifest.json"
+        ))
+        .unwrap();
     }
     if let Some(base) = vector["base"].as_str() {
         let mut value = materialize(
@@ -66,11 +69,13 @@ fn apply_patch(root: &mut Value, patch: &Value) {
 }
 
 #[test]
-fn unified_165_frozen_vectors() {
-    let golden: Value =
-        serde_json::from_str(include_str!("../contract/unified-v1.golden.json")).unwrap();
+fn unified_166_frozen_vectors() {
+    let golden: Value = serde_json::from_str(include_str!(
+        "../src/serve_persistence/assets/unified-v1.golden.json"
+    ))
+    .unwrap();
     let vectors = golden["vectors"].as_array().unwrap();
-    assert_eq!(vectors.len(), 165);
+    assert_eq!(vectors.len(), 166);
     let mut valid = 0;
     for vector in vectors {
         let value = materialize(vector, vectors);
@@ -79,7 +84,7 @@ fn unified_165_frozen_vectors() {
         assert_eq!(result.is_ok(), expected, "{}: {result:?}", vector["name"]);
         valid += usize::from(expected);
     }
-    assert_eq!(valid, 41);
+    assert_eq!(valid, 42);
 }
 
 #[test]

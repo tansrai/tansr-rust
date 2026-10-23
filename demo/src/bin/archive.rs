@@ -17,7 +17,7 @@ use tansr_sdk::{
 use tansr_sdk_demo::{Args, archive_key, base_url, client, family, report, request_id, safe_text};
 use tokio_util::sync::CancellationToken;
 
-const HELP: &str = "tansr-archive --mode MODE [--base ORIGIN] [--family sdk1|sdk2-offload-v1]\nprepare-create: --session ID --source ID --request-id STABLE_ID --intent ABSOLUTE_PRIVATE_FILE\ncreate / creation-status: --intent ORIGINAL_FILE\nsync: --binding ID --file ABSOLUTE_PRIVATE_FILE [--max-pages 64]\nrecover: --binding ID --file ORIGINAL_FILE --request-id STABLE_RECOVERY_ID\nmaterials: --binding ID --file ORIGINAL_FILE --request-id STABLE_RESPONSE_ID --intent NEW_PRIVATE_FILE\nmaterial-submit / material-status: --intent ORIGINAL_MATERIAL_RESPONSE_FILE\nTANSR_TOKEN_FILE is required. sync/recover/materials additionally require TANSR_ARCHIVE_KEY_FILE (64 hex digits). Existing intents, archives and keys are never replaced on errors.";
+const HELP: &str = "tansr-archive --mode MODE [--base ORIGIN] [--family sdk1|sdk2-offload-v1]\ndiscover: --session ID (source-managed; no local file or create-binding)\nprepare-create: --session ID --source ID --request-id STABLE_ID --intent ABSOLUTE_PRIVATE_FILE\ncreate / creation-status: --intent ORIGINAL_FILE\nsync: --binding ID --file ABSOLUTE_PRIVATE_FILE [--max-pages 64]\nrecover: --binding ID --file ORIGINAL_FILE --request-id STABLE_RECOVERY_ID\nmaterials: --binding ID --file ORIGINAL_FILE --request-id STABLE_RESPONSE_ID --intent NEW_PRIVATE_FILE\nmaterial-submit / material-status: --intent ORIGINAL_MATERIAL_RESPONSE_FILE\nTANSR_TOKEN_FILE is required. sync/recover/materials additionally require TANSR_ARCHIVE_KEY_FILE (64 hex digits). Existing intents, archives and keys are never replaced on errors.";
 
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
@@ -37,6 +37,24 @@ async fn run() -> Result<()> {
     let cancelled = CancellationToken::new();
     let work = async {
         match mode.as_str() {
+            "discover" => {
+                let session = args.required("--session")?;
+                args.finish()?;
+                let persistence =
+                    tansr_sdk::serve_persistence::Client::new(client(&base, &family)?)
+                        .discover(&session)
+                        .await?;
+                let binding = archive.installed_binding(&session).await?;
+                let status = archive.status(&binding.binding_id).await?;
+                Identity::from_binding(&binding, &status)?;
+                println!(
+                    "mode: {}; binding: {}; source: {}; no local archive opened",
+                    safe_text(&persistence.mode),
+                    safe_text(&binding.binding_id),
+                    safe_text(&persistence.source_id)
+                );
+                Ok(())
+            }
             "prepare-create" => {
                 let session = args.required("--session")?;
                 let source = args.required("--source")?;

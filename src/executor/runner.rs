@@ -117,10 +117,21 @@ impl Runner {
             if name == "MemoryPublication" {
                 return Err(invalid("publication is not a business tool"));
             }
+            if name == crate::serve_persistence::custody::TOOL_NAME
+                && (tool.definition_digest != crate::serve_persistence::custody::TOOL_DIGEST
+                    || !tool.handler.is_persistence_custody_host()
+                    || !(options.journal.encrypted_at_rest()
+                        || options.journal.independent_cloud_authority()))
+            {
+                return Err(invalid(
+                    "custody requires dedicated host and protected journal",
+                ));
+            }
             if name == crate::terminal_persistence::TOOL_NAME
                 && (tool.definition_digest != crate::terminal_persistence::TOOL_DIGEST
                     || !tool.handler.is_terminal_persistence_host()
-                    || !options.journal.encrypted_at_rest())
+                    || !(options.journal.encrypted_at_rest()
+                        || options.journal.independent_cloud_authority()))
             {
                 return Err(invalid(
                     "persistence requires dedicated host and encrypted execution journal",
@@ -129,7 +140,8 @@ impl Runner {
             if name == crate::memory_publication::TOOL_NAME
                 && (tool.definition_digest != crate::memory_publication::TOOL_DIGEST
                     || !tool.handler.is_memory_publication_host()
-                    || !options.journal.encrypted_at_rest())
+                    || !(options.journal.encrypted_at_rest()
+                        || options.journal.independent_cloud_authority()))
             {
                 return Err(invalid(
                     "publication requires dedicated host and encrypted execution journal",
@@ -411,6 +423,7 @@ impl Runner {
             }
         });
         match self.options.journal.claim(&op).await? {
+            ClaimResult::Unowned => return Err(Error::Unknown("cloud execution is pending without this attempt's claim token; reconcile original operation".into())),
             ClaimResult::Receipt(r) => {
                 validate_receipt(&op, &r)?;
                 if remote

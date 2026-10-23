@@ -140,7 +140,7 @@ pub fn render(raw: &[u8]) -> Result<String, String> {
     .unwrap();
     writeln!(
         out,
-        "// Source: contract/api-manifest.json, SHA256 {:x}\n",
+        "// Source: src/serve_persistence/assets/api-manifest.json, SHA256 {:x}\n",
         Sha256::digest(raw)
     )
     .unwrap();
@@ -194,8 +194,9 @@ pub fn render(raw: &[u8]) -> Result<String, String> {
 }
 
 pub fn generate(root: &Path, check: bool) -> Result<(), String> {
-    let source =
-        fs::read(root.join("contract/api-manifest.json")).map_err(|error| error.to_string())?;
+    check_persistence_assets(root)?;
+    let source = fs::read(root.join("src/serve_persistence/assets/api-manifest.json"))
+        .map_err(|error| error.to_string())?;
     let generated = render(&source)?;
     let target = root.join("src/api/operations.rs");
     if check {
@@ -210,5 +211,40 @@ pub fn generate(root: &Path, check: bool) -> Result<(), String> {
         "operation catalogue {}",
         if check { "verified" } else { "generated" }
     );
+    Ok(())
+}
+
+/// Additive public profile is locked independently from the unchanged 39 files.
+fn check_persistence_assets(root: &Path) -> Result<(), String> {
+    let directory = root.join("src/serve_persistence/assets");
+    let provenance: serde_json::Value = serde_json::from_slice(
+        &fs::read(directory.join("SOURCE.json")).map_err(|e| e.to_string())?,
+    )
+    .map_err(|e| e.to_string())?;
+    if provenance["sourceCommit"] != "d59972fb4892102fb4f4ffd96726641684ace9e4" {
+        return Err("persistence profile source commit drift".into());
+    }
+    let mut expected = BTreeSet::from(["SOURCE.json".to_string()]);
+    for asset in provenance["assets"]
+        .as_array()
+        .ok_or("missing profile assets")?
+    {
+        let file = asset["file"].as_str().ok_or("missing asset name")?;
+        if !file.ends_with(".json") || file.contains(['/', '\\']) || !expected.insert(file.into()) {
+            return Err("invalid or repeated profile asset".into());
+        }
+        let bytes = fs::read(directory.join(file)).map_err(|e| e.to_string())?;
+        if asset["sha256"] != format!("{:x}", Sha256::digest(bytes)) {
+            return Err(format!("persistence profile hash drift: {file}"));
+        }
+    }
+    let actual: BTreeSet<_> = fs::read_dir(directory)
+        .map_err(|e| e.to_string())?
+        .map(|entry| entry.map(|e| e.file_name().to_string_lossy().into_owned()))
+        .collect::<Result<_, _>>()
+        .map_err(|e| e.to_string())?;
+    if expected.len() != 7 || actual != expected {
+        return Err("persistence profile inventory drift".into());
+    }
     Ok(())
 }

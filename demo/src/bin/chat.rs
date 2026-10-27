@@ -8,15 +8,16 @@ use std::{
 };
 use tansr_sdk::{
     api::{Error, Result},
+    executor::{Client as ExecutionClient, Scope},
     session::{
-        Answer, CreateOptions, Input, OutcomeStatus, Session, SessionClient, SessionEvent,
-        TurnTracker,
+        Answer, CreateOptions, Input, OutcomeStatus, PreparationOptions, ResumeReference, Session,
+        SessionClient, SessionEvent, TurnTracker,
     },
 };
 use tansr_sdk_demo::{Args, base_url, client, describe, family, report, safe_text, write_options};
 use tokio_util::sync::CancellationToken;
 
-const HELP: &str = "tansr-chat [--base ORIGIN] [--family sdk1|sdk2-offload-v1] [--resume ID] [--model MODEL] [--message TEXT] [--timeout SECONDS]\nNew offload sessions additionally require --request-id STABLE_ID.\nAuthentication: TANSR_TOKEN_FILE. No approval is automatic.\nCommands: /interrupt, /allow TICKET, /deny TICKET, /answers TICKET JSON_ARRAY, /insert JSON_OBJECT, /history, /quit.\nCtrl+C and /quit stop local observation only. /interrupt explicitly requests a Serve interruption.";
+const HELP: &str = "tansr-chat [--base ORIGIN] [--family sdk1|sdk2-offload-v1] [--resume ID] [--model MODEL] [--message TEXT] [--timeout SECONDS]\nNew offload sessions additionally require --request-id STABLE_ID.\nAuthentication: TANSR_TOKEN_FILE. Initialization scope: --application / TANSR_APPLICATION_SCOPE_ID; --user / TANSR_END_USER_ID; --authorization-revision / TANSR_AUTHORIZATION_REVISION. No approval is automatic.\nCommands: /interrupt, /allow TICKET, /deny TICKET, /answers TICKET JSON_ARRAY, /insert JSON_OBJECT, /history, /quit.\nCtrl+C and /quit stop local observation only. /interrupt explicitly requests a Serve interruption.";
 
 #[tokio::main]
 async fn main() -> std::process::ExitCode {
@@ -31,6 +32,19 @@ async fn run() -> Result<()> {
     }
     let base = base_url(&mut args);
     let family = family(&mut args)?;
+    let scope = Scope {
+        application_scope_id: tansr_sdk_demo::env_required(
+            &mut args,
+            "--application",
+            "TANSR_APPLICATION_SCOPE_ID",
+        )?,
+        end_user_id: tansr_sdk_demo::env_required(&mut args, "--user", "TANSR_END_USER_ID")?,
+        authorization_revision: tansr_sdk_demo::env_required(
+            &mut args,
+            "--authorization-revision",
+            "TANSR_AUTHORIZATION_REVISION",
+        )?,
+    };
     let resume = args.take("--resume");
     let create_request = if family == "sdk2-offload-v1" && resume.is_none() {
         Some(args.required("--request-id")?)
@@ -50,22 +64,32 @@ async fn run() -> Result<()> {
     }
     args.finish()?;
     let api = client(&base, &family)?;
+    let execution = ExecutionClient::new(api.clone(), scope)?;
     let sessions = SessionClient::new(api)?;
     let cancel = CancellationToken::new();
     let task = async {
-        let session = if let Some(id) = resume {
-            sessions.resume(&id, write_options(&cancel)).await?
-        } else {
-            sessions
-                .create(CreateOptions {
+        let on_confirmed = |session: &Session| println!("session: {}", safe_text(session.id()));
+        let on_progress = |progress: tansr_sdk::session::PreparationProgress| {
+            println!("prepare: {} {:?}", progress.stage.as_str(), progress.status)
+        };
+        let prepared = sessions
+            .prepare(
+                CreateOptions {
                     request_id: create_request,
                     model,
+                    resume: resume.map(|session_id| ResumeReference { session_id }),
                     write: write_options(&cancel),
                     ..Default::default()
-                })
-                .await?
-        };
-        println!("session: {}", safe_text(session.id()));
+                },
+                PreparationOptions {
+                    on_session_confirmed: Some(&on_confirmed),
+                    on_progress: Some(&on_progress),
+                    ..PreparationOptions::new(&execution)
+                },
+            )
+            .await
+            .map_err(|failure| failure.cause)?;
+        let session = prepared.session;
         println!("{HELP}");
         chat(&session, message, cancel.clone()).await
     };

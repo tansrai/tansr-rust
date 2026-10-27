@@ -56,7 +56,7 @@ async fn run() -> Result<()> {
     let mut args = Args::parse()?;
     if args.help() {
         println!(
-            "terminal_persistence --config TRUSTED_HOST_JSON --store ABSOLUTE_FILE --journal ABSOLUTE_DIRECTORY --mode create|reopen [--base ORIGIN] [--family sdk1|sdk2-offload-v1] [--stop-file ABSOLUTE_PATH] [--recover-operation ORIGINAL_OPERATION_ID]\nRequires TANSR_TOKEN_FILE and TANSR_ARCHIVE_KEY_FILE. Config contains identity, owner and an already registered live connection. Registration must include only TansrTerminalPersistenceV1 with its frozen digest. Ctrl+C or an explicitly supplied stop-file drains storage. Reopen requires the original encrypted journal; missing media never initializes an empty replacement. The trusted config is reread on every local authorization check; a changed file stops this owner. Offline copy: --config TRUSTED_HOST_JSON --store ORIGINAL_FILE --mode reopen --copy-to NEW_DIRECTORY/METADATA_FILE --copy-key-file NEW_KEY_FILE; omit --journal, no token or Serve connection is used. The target directory must be new under a private parent. Complete encrypted V1 facts are copied; the separate execution journal is not. A persistent authenticated read-only fence keeps cutover pending; ordinary reopen cannot activate it. Preserve both paths and keys on errors. Recovery queries the original operation from Serve and reuses its exact journal key; it prints only operation/digest/transfer/status anchors. This is a host integration example, not a login or memory business implementation."
+            "terminal_persistence --config TRUSTED_HOST_JSON --store ABSOLUTE_FILE --journal ABSOLUTE_DIRECTORY --mode create|reopen [--layout legacy-v1|authenticated-indexed-v2] [--base ORIGIN] [--family sdk1|sdk2-offload-v1] [--stop-file ABSOLUTE_PATH] [--recover-operation ORIGINAL_OPERATION_ID]\nRequires TANSR_TOKEN_FILE and TANSR_ARCHIVE_KEY_FILE. Config contains identity, owner and an already registered live connection. Registration must include only TansrTerminalPersistenceV1 with its frozen digest. Ctrl+C or an explicitly supplied stop-file drains storage. Reopen requires the original encrypted journal; missing media never initializes an empty replacement. The trusted config is reread on every local authorization check; a changed file stops this owner. Offline copy: --config TRUSTED_HOST_JSON --store ORIGINAL_FILE --mode reopen --copy-to NEW_DIRECTORY/METADATA_FILE --copy-key-file NEW_KEY_FILE; omit --journal, no token or Serve connection is used. The target directory must be new under a private parent. The layout must match the original medium: the explicit indexed V2 source performs lazy authenticated reads; legacy-v1 retains whole metadata audit. No layout migration or fallback is performed. Complete encrypted TPV1 facts are copied; the separate execution journal is not. A persistent authenticated read-only fence keeps cutover pending; ordinary reopen cannot activate it. Preserve both paths and keys on errors. Recovery queries the original operation from Serve and reuses its exact journal key; it prints only operation/digest/transfer/status anchors. This is a host integration example, not a login or memory business implementation."
         );
         return Ok(());
     }
@@ -71,6 +71,15 @@ async fn run() -> Result<()> {
         "create" => OpenMode::Create,
         "reopen" => OpenMode::Reopen,
         _ => return Err(Error::InvalidInput("mode must be create or reopen".into())),
+    };
+    let indexed = match args.take("--layout").as_deref().unwrap_or("legacy-v1") {
+        "legacy-v1" => false,
+        "authenticated-indexed-v2" => true,
+        _ => {
+            return Err(Error::InvalidInput(
+                "layout must be legacy-v1 or authenticated-indexed-v2".into(),
+            ));
+        }
     };
     let stop_file = args.take("--stop-file").map(PathBuf::from);
     let recovery_operation = args.take("--recover-operation");
@@ -117,20 +126,20 @@ async fn run() -> Result<()> {
         let new_key = archive_key_from_file(
             &copy_key_file.ok_or_else(|| Error::InvalidInput("copy key missing".into()))?,
         )?;
-        let receipt = FileStore::copy_from(
-            StoreOptions {
-                path,
-                mode,
-                key,
-                identity,
-                limits: Limits::default(),
-                read_context: Arc::new(move || source.current()),
-                authorize_recovery: None,
-            },
-            target,
-            new_key,
-        )
-        .await?;
+        let options = StoreOptions {
+            path,
+            mode,
+            key,
+            identity,
+            limits: Limits::default(),
+            read_context: Arc::new(move || source.current()),
+            authorize_recovery: None,
+        };
+        let receipt = if indexed {
+            FileStore::copy_from_indexed(options, target, new_key).await?
+        } else {
+            FileStore::copy_from(options, target, new_key).await?
+        };
         println!("{}", serde_json::to_string(&receipt)?);
         return Ok(());
     }
@@ -179,7 +188,7 @@ async fn run() -> Result<()> {
             return Err(error);
         }
     };
-    let store = FileStore::open(StoreOptions {
+    let options = StoreOptions {
         path,
         mode,
         key,
@@ -187,8 +196,12 @@ async fn run() -> Result<()> {
         limits: Limits::default(),
         read_context: Arc::new(move || source.current()),
         authorize_recovery: None,
-    })
-    .await;
+    };
+    let store = if indexed {
+        FileStore::open_indexed(options).await
+    } else {
+        FileStore::open(options).await
+    };
     let store = match store {
         Ok(store) => Arc::new(store),
         Err(error) => {
@@ -242,7 +255,7 @@ async fn run() -> Result<()> {
                 "transferId":request.as_ref().and_then(|v|v.get("transferId")),"status":receipt.status}));
             return Ok(());
         }
-        println!("Encrypted V1 root, body blocks, opaque indexes, permanent transfer witnesses and execution receipts attached; original recovery anchors retained.");
+        println!("Encrypted TPV1 root, body blocks, opaque indexes, permanent transfer witnesses and execution receipts attached; original recovery anchors retained.");
         let signal = cancelled.clone();
         let interrupt = tokio::spawn(async move {
             tokio::select! {

@@ -150,6 +150,19 @@ impl Client {
         tools: Option<Vec<String>>,
         closure: &str,
     ) -> Result<Capabilities> {
+        self.initialize_with_control(session, platform, tools, closure, CallOptions::default())
+            .await
+    }
+
+    // 仅标准准备入口使用原调用取消/期限；不改变既有 initialize 的默认行为。
+    pub(crate) async fn initialize_with_control(
+        &self,
+        session: &str,
+        platform: &Platform,
+        tools: Option<Vec<String>>,
+        closure: &str,
+        control: CallOptions,
+    ) -> Result<Capabilities> {
         let mut body = json!({"protocol":PROTOCOL,"sessionId":session,"platform":platform});
         if let Some(t) = tools {
             if t.iter().collect::<HashSet<_>>().len() != t.len() {
@@ -166,6 +179,8 @@ impl Client {
                     params: params(&[("id", session)]),
                     body: Some(body),
                     closure_id: Some(closure.into()),
+                    cancellation: control.cancellation,
+                    deadline: control.deadline,
                     ..Default::default()
                 },
             )

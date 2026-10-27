@@ -10,6 +10,16 @@ pub(super) struct CustodyState {
     frozen: bool,
     migrations: BTreeMap<String, Migration>,
 }
+impl CustodyState {
+    pub(super) fn indexed_fence(&self) -> Self {
+        Self {
+            selected: self.selected.clone(),
+            writer_fence: self.writer_fence.clone(),
+            frozen: self.frozen,
+            migrations: BTreeMap::new(),
+        }
+    }
+}
 #[derive(Clone, Serialize, Deserialize)]
 struct Migration {
     intent: String,
@@ -58,6 +68,7 @@ impl CustodyPort {
                 }
                 let result = (|| {
                     inner.check(before)?;
+                    inner.index_complete()?;
                     let result = action(inner, before)?;
                     inner.check(before)?;
                     Ok(result)
@@ -843,6 +854,7 @@ impl Inner {
                     // all original terminal facts are published by one metadata CAS.
                     self.check(before)?;
                     let sealed = self.cipher.seal(bytes, &self.object_aad(key)?)?;
+                    self.index_burn(sealed.len(), 1, before)?;
                     let mut file = platform::open_at(&self.directory, &path, true, true)?;
                     file.write_all(&sealed)?;
                     file.sync_all()?;
@@ -942,6 +954,7 @@ impl PersistenceStore for FencedStore {
                 if owner != *before {
                     return Err(reject("context_changed"));
                 }
+                inner.index_prepare(&request)?;
                 if let Some(current) = &inner.state.custody {
                     if current.frozen
                         || current.selected != custody

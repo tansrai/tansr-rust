@@ -4,9 +4,11 @@
 
 mod control;
 mod events;
+mod preparation;
 mod types;
 
 pub use events::{Outcome, OutcomeStatus, SessionEvent, SessionEventStream, TurnTracker};
+pub use preparation::*;
 pub use types::*;
 
 use std::collections::BTreeMap;
@@ -175,7 +177,8 @@ impl SessionClient {
             if !seen.insert(family.to_owned())
                 || !matches!(
                     (family, availability),
-                    ("sdk1", "legacy-complete") | ("sdk2-offload-v1", "source-required")
+                    ("sdk1", "legacy-complete")
+                        | ("sdk2-offload-v1", "source-required" | "source-managed")
                 )
             {
                 return Err(contract(
@@ -765,7 +768,11 @@ fn read_meta(raw: Value, family: &str) -> Result<Meta> {
 
 fn check_family(raw: &Value, family: &str) -> Result<()> {
     if family == "sdk2-offload-v1"
-        && (raw["contract"] != family || raw["availability"] != "source-required")
+        && (raw["contract"] != family
+            || !matches!(
+                raw["availability"].as_str(),
+                Some("source-required" | "source-managed")
+            ))
     {
         return Err(contract("offload family/source lifecycle is missing"));
     }

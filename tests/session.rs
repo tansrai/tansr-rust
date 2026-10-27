@@ -1,5 +1,837 @@
 //! Public-client protocol fault injection, separate from real Serve acceptance.
 
+#[tokio::test]
+async fn preparation_indexed_terminal_source_owns_actual_reopened_medium() {
+    use tansr_sdk::terminal_persistence::{
+        FileStore, Identity, Limits, OpenMode, Owner, PersistenceStore, StoreOptions,
+    };
+    struct Source {
+        options: Mutex<Option<StoreOptions>>,
+        ready: Arc<std::sync::atomic::AtomicBool>,
+        held: Mutex<Option<Arc<FileStore>>>,
+        owner: Owner,
+    }
+    #[async_trait::async_trait]
+    impl PersistenceProvider for Source {
+        async fn prepare_persistence(
+            &self,
+            startup: PreparationControl,
+        ) -> tansr_sdk::Result<Option<Arc<dyn PreparationResource>>> {
+            startup.check()?;
+            let options = self
+                .options
+                .lock()
+                .unwrap()
+                .take()
+                .expect("single preparation");
+            let store = Arc::new(FileStore::open_indexed(options).await?);
+            if let Err(e) = startup.check() {
+                store.close().await?;
+                return Err(e);
+            }
+            let identity = store.identity();
+            let head=store.execute(json!({"contract":"terminal-persistence-v1","action":"head","sourceId":identity.source_id,"sourceGeneration":identity.source_generation,"domainKey":identity.domain_key}),self.owner.clone()).await?;
+            assert!(head["root"].is_null());
+            *self.held.lock().unwrap() = Some(store.clone());
+            self.ready.store(true, std::sync::atomic::Ordering::SeqCst);
+            Ok(Some(store))
+        }
+    }
+    let fixture: Value =
+        serde_json::from_str(include_str!("fixtures/persistence-custody-node.json")).unwrap();
+    let identity: Identity = serde_json::from_value(fixture["identity"].clone()).unwrap();
+    let owner: Owner = serde_json::from_value(fixture["owner"].clone()).unwrap();
+    let dir = tempfile::tempdir().unwrap();
+    let directory = dir.path().canonicalize().unwrap().join("private");
+    tansr_sdk::archive::create_private_directory(&directory).unwrap();
+    let path = directory.join("store");
+    let options = |mode| {
+        let owner = owner.clone();
+        StoreOptions {
+            path: path.clone(),
+            mode,
+            key: [37; 32],
+            identity: identity.clone(),
+            limits: Limits::default(),
+            read_context: Arc::new(move || Ok(owner.clone())),
+            authorize_recovery: None,
+        }
+    };
+    FileStore::open_indexed(options(OpenMode::Create))
+        .await
+        .unwrap()
+        .close()
+        .await
+        .unwrap();
+    let ready = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let observed = ready.clone();
+    let server = Server::start(move |r, _| {
+        assert!(
+            observed.load(std::sync::atomic::Ordering::SeqCst),
+            "HTTP preceded actual source head validation"
+        );
+        Some(preparation_reply(r))
+    })
+    .await;
+    let client = server.client("sdk2-offload-v1");
+    let execution = preparation_execution(&client);
+    let source = Source {
+        options: Mutex::new(Some(options(OpenMode::Reopen))),
+        ready,
+        held: Mutex::new(None),
+        owner: owner.clone(),
+    };
+    let prepared = client
+        .prepare(
+            CreateOptions {
+                request_id: Some("indexed-source-original".into()),
+                ..Default::default()
+            },
+            PreparationOptions {
+                prepare_persistence: Some(&source),
+                ..PreparationOptions::new(&execution)
+            },
+        )
+        .await
+        .unwrap();
+    assert!(
+        FileStore::open_indexed(options(OpenMode::Reopen))
+            .await
+            .is_err(),
+        "ready must retain the original source lock"
+    );
+    prepared.stop().await.unwrap();
+    prepared.stop().await.unwrap();
+    FileStore::open_indexed(options(OpenMode::Reopen))
+        .await
+        .unwrap()
+        .close()
+        .await
+        .unwrap();
+    prepared.session.meta().await.unwrap();
+    assert_eq!(
+        server
+            .requests()
+            .iter()
+            .filter(|r| r.target == "/api/sessions")
+            .count(),
+        1
+    );
+}
+
+struct PersistenceTestResource {
+    stops: std::sync::atomic::AtomicUsize,
+    fail: bool,
+    wait: Option<(CancellationToken, CancellationToken)>,
+}
+impl PersistenceTestResource {
+    fn new(fail: bool) -> Arc<Self> {
+        Arc::new(Self {
+            stops: std::sync::atomic::AtomicUsize::new(0),
+            fail,
+            wait: None,
+        })
+    }
+    fn count(&self) -> usize {
+        self.stops.load(std::sync::atomic::Ordering::SeqCst)
+    }
+}
+#[async_trait::async_trait]
+impl PreparationResource for PersistenceTestResource {
+    async fn stop(&self) -> tansr_sdk::api::Result<()> {
+        self.stops.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        if let Some((entered, release)) = &self.wait {
+            entered.cancel();
+            release.cancelled().await;
+        }
+        if self.fail {
+            Err(Error::Contract("cleanup result unknown".into()))
+        } else {
+            Ok(())
+        }
+    }
+}
+struct PersistenceTestProvider {
+    resource: Option<Arc<PersistenceTestResource>>,
+    wait: Option<(CancellationToken, CancellationToken)>,
+    fail: bool,
+}
+#[async_trait::async_trait]
+impl PersistenceProvider for PersistenceTestProvider {
+    async fn prepare_persistence(
+        &self,
+        startup: PreparationControl,
+    ) -> tansr_sdk::api::Result<Option<Arc<dyn PreparationResource>>> {
+        startup.check()?;
+        if let Some((entered, release)) = &self.wait {
+            entered.cancel();
+            release.cancelled().await;
+        }
+        if self.fail {
+            Err(Error::Contract("source unavailable".into()))
+        } else {
+            // Deliberately return the acquired handle after a possible cancel;
+            // the SDK must collect it rather than abandon it in a race.
+            Ok(self
+                .resource
+                .clone()
+                .map(|r| r as Arc<dyn PreparationResource>))
+        }
+    }
+}
+
+#[tokio::test]
+async fn preparation_persistence_ready_gate_and_handoff() {
+    let server = Server::start(|r, _| Some(preparation_reply(r))).await;
+    let client = server.client("sdk2-offload-v1");
+    let execution = preparation_execution(&client);
+    let resource = PersistenceTestResource::new(false);
+    let entered = CancellationToken::new();
+    let release = CancellationToken::new();
+    let provider = PersistenceTestProvider {
+        resource: Some(resource.clone()),
+        wait: Some((entered.clone(), release.clone())),
+        fail: false,
+    };
+    let stages = Mutex::new(Vec::new());
+    let progress = |p: PreparationProgress| {
+        if p.status == PreparationStatus::Completed {
+            stages.lock().unwrap().push(p.stage);
+        }
+    };
+    let mut first = Box::pin(client.prepare(
+        CreateOptions {
+            request_id: Some("provider-original".into()),
+            ..Default::default()
+        },
+        PreparationOptions {
+            prepare_persistence: Some(&provider),
+            on_progress: Some(&progress),
+            ..PreparationOptions::new(&execution)
+        },
+    ));
+    tokio::select! {
+        _ = entered.cancelled() => {},
+        _ = &mut first => panic!("create ran before provider readiness"),
+    }
+    assert!(server.requests().is_empty());
+    let cloud = client
+        .prepare(
+            CreateOptions {
+                request_id: Some("cloud-original".into()),
+                ..Default::default()
+            },
+            PreparationOptions::new(&execution),
+        )
+        .await
+        .unwrap();
+    cloud.stop().await.unwrap();
+    assert_eq!(resource.count(), 0);
+    release.cancel();
+    let result = first.await.unwrap();
+    assert_eq!(resource.count(), 0, "resource remains live after success");
+    assert_eq!(
+        *stages.lock().unwrap(),
+        vec![
+            PreparationStage::PreparingPersistence,
+            PreparationStage::Connecting,
+            PreparationStage::SessionConfirmed,
+            PreparationStage::InitializingCapabilities,
+            PreparationStage::Ready
+        ]
+    );
+    let (a, b) = tokio::join!(result.stop(), result.stop());
+    a.unwrap();
+    b.unwrap();
+    assert_eq!(resource.count(), 1);
+    result.session.meta().await.unwrap();
+}
+
+#[tokio::test]
+async fn preparation_persistence_failure_prevents_create() {
+    let server = Server::start(|r, _| Some(preparation_reply(r))).await;
+    let client = server.client("sdk2-offload-v1");
+    let execution = preparation_execution(&client);
+    let provider = PersistenceTestProvider {
+        resource: None,
+        wait: None,
+        fail: true,
+    };
+    let failure = client
+        .prepare(
+            CreateOptions {
+                request_id: Some("original".into()),
+                ..Default::default()
+            },
+            PreparationOptions {
+                prepare_persistence: Some(&provider),
+                ..PreparationOptions::new(&execution)
+            },
+        )
+        .await
+        .err()
+        .unwrap();
+    assert_eq!(failure.stage, PreparationStage::PreparingPersistence);
+    assert!(matches!(&failure.cause, Error::Contract(message) if message == "source unavailable"));
+    assert!(failure.session.is_none());
+    assert!(failure.cleanup_error.is_none());
+    failure.stop().await.unwrap();
+    assert!(server.requests().is_empty());
+}
+
+#[tokio::test]
+async fn preparation_persistence_late_cancel_is_collected() {
+    let server = Server::start(|r, _| Some(preparation_reply(r))).await;
+    let parent = CancellationToken::new();
+    let client = server
+        .client("sdk2-offload-v1")
+        .with_cancellation(parent.clone());
+    let execution = preparation_execution(&client);
+    let resource = PersistenceTestResource::new(false);
+    let entered = CancellationToken::new();
+    let release = CancellationToken::new();
+    let provider = PersistenceTestProvider {
+        resource: Some(resource.clone()),
+        wait: Some((entered.clone(), release.clone())),
+        fail: false,
+    };
+    let mut pending = Box::pin(client.prepare(
+        CreateOptions {
+            request_id: Some("original".into()),
+            ..Default::default()
+        },
+        PreparationOptions {
+            prepare_persistence: Some(&provider),
+            ..PreparationOptions::new(&execution)
+        },
+    ));
+    tokio::select! { _ = entered.cancelled() => {}, _ = &mut pending => panic!("premature result") }
+    parent.cancel();
+    release.cancel();
+    let failure = pending.await.err().unwrap();
+    assert!(matches!(failure.cause, Error::Cancelled));
+    assert!(failure.session.is_none());
+    assert_eq!(resource.count(), 1);
+    failure.stop().await.unwrap();
+    assert_eq!(resource.count(), 1);
+    assert!(server.requests().is_empty());
+}
+
+#[tokio::test]
+async fn preparation_persistence_later_failure_retains_cause_and_cleanup() {
+    let server = Server::start(|r, _| {
+        Some(if r.target.ends_with("/initialize") {
+            Reply::json(200, "execution", json!({"invalid":"fixture"}))
+        } else {
+            preparation_reply(r)
+        })
+    })
+    .await;
+    let client = server.client("sdk2-offload-v1");
+    let execution = preparation_execution(&client);
+    let resource = PersistenceTestResource::new(true);
+    let provider = PersistenceTestProvider {
+        resource: Some(resource.clone()),
+        wait: None,
+        fail: false,
+    };
+    let failure = client
+        .prepare(
+            CreateOptions {
+                request_id: Some("original".into()),
+                ..Default::default()
+            },
+            PreparationOptions {
+                prepare_persistence: Some(&provider),
+                ..PreparationOptions::new(&execution)
+            },
+        )
+        .await
+        .err()
+        .unwrap();
+    assert_eq!(failure.stage, PreparationStage::InitializingCapabilities);
+    assert_eq!(failure.session.as_ref().unwrap().id(), "s1");
+    assert!(
+        matches!(&failure.cause, Error::Contract(message) if message != "cleanup result unknown")
+    );
+    let cleanup = failure.cleanup_error.as_ref().unwrap();
+    assert!(
+        matches!(cleanup.as_ref(), Error::Contract(message) if message == "cleanup result unknown")
+    );
+    let replay = failure.stop().await.unwrap_err();
+    assert!(Arc::ptr_eq(cleanup, &replay));
+    assert_eq!(resource.count(), 1);
+    assert_eq!(server.requests().len(), 4);
+}
+
+#[tokio::test]
+async fn preparation_persistence_borrowed_source_has_no_stop_authority() {
+    let server = Server::start(|r, _| Some(preparation_reply(r))).await;
+    let client = server.client("sdk2-offload-v1");
+    let execution = preparation_execution(&client);
+    let provider = PersistenceTestProvider {
+        resource: None,
+        wait: None,
+        fail: false,
+    };
+    let result = client
+        .prepare(
+            CreateOptions {
+                request_id: Some("original".into()),
+                ..Default::default()
+            },
+            PreparationOptions {
+                prepare_persistence: Some(&provider),
+                ..PreparationOptions::new(&execution)
+            },
+        )
+        .await
+        .unwrap();
+    result.stop().await.unwrap();
+    result.stop().await.unwrap();
+    assert_eq!(server.requests().len(), 4, "no remote close or retry");
+}
+
+#[tokio::test]
+async fn preparation_persistence_dropped_stop_remains_unknown() {
+    let server = Server::start(|r, _| Some(preparation_reply(r))).await;
+    let client = server.client("sdk2-offload-v1");
+    let execution = preparation_execution(&client);
+    let entered = CancellationToken::new();
+    let release = CancellationToken::new();
+    let resource = Arc::new(PersistenceTestResource {
+        stops: std::sync::atomic::AtomicUsize::new(0),
+        fail: false,
+        wait: Some((entered.clone(), release.clone())),
+    });
+    let provider = PersistenceTestProvider {
+        resource: Some(resource.clone()),
+        wait: None,
+        fail: false,
+    };
+    let result = client
+        .prepare(
+            CreateOptions {
+                request_id: Some("original".into()),
+                ..Default::default()
+            },
+            PreparationOptions {
+                prepare_persistence: Some(&provider),
+                ..PreparationOptions::new(&execution)
+            },
+        )
+        .await
+        .unwrap();
+    let mut pending = Box::pin(result.stop());
+    tokio::select! { _ = entered.cancelled() => {}, _ = &mut pending => panic!("premature stop") }
+    drop(pending);
+    release.cancel();
+    assert!(
+        result.stop().await.is_err(),
+        "dropped stop is not known success"
+    );
+    assert_eq!(resource.count(), 1, "unknown stop must not repeat");
+}
+
+fn preparation_execution(client: &SessionClient) -> tansr_sdk::executor::Client {
+    tansr_sdk::executor::Client::new(
+        client.api().clone(),
+        tansr_sdk::executor::Scope {
+            application_scope_id: "app".into(),
+            end_user_id: "user".into(),
+            authorization_revision: "1".into(),
+        },
+    )
+    .unwrap()
+}
+
+fn preparation_reply(request: &Request) -> Reply {
+    if request.target.starts_with("/api/capabilities/sessions") {
+        return Reply::json(
+            200,
+            "session",
+            json!({"protocol":"sdk2-ext-v1","contracts":[{"contract":"sdk2-offload-v1","availability":"source-managed"}]}),
+        );
+    }
+    if request.target == "/api/sessions" {
+        return Reply::json(
+            201,
+            "session",
+            json!({"sessionId":"s1","resumed":false,"lastSeq":0,"contract":"sdk2-offload-v1","availability":"source-managed"}),
+        );
+    }
+    if request.target.ends_with("/capabilities") {
+        return Reply::closure("enabled");
+    }
+    if request.target.ends_with("/initialize") {
+        let body: Value = serde_json::from_slice(&request.body).unwrap();
+        return Reply::json(
+            200,
+            "execution",
+            json!({"protocol":"sdk2-ext-v1","sessionId":"s1","platform":body["platform"],"capabilityRevision":"b".repeat(64),"effectiveTools":[],"binding":null}),
+        );
+    }
+    if request.target == "/api/sessions/s1" {
+        return Reply::json(
+            200,
+            "session",
+            json!({"sessionId":"s1","status":"idle","live":true,"lastSeq":0,"contract":"sdk2-offload-v1","availability":"source-managed"}),
+        );
+    }
+    panic!("unexpected request {}", request.target)
+}
+
+#[tokio::test]
+async fn preparation_preserves_intent_and_tools_presence() {
+    for tools in [None, Some(vec![])] {
+        let confirmed = Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let observed = confirmed.clone();
+        let server = Server::start(move |r, _| {
+            if r.target.ends_with("/initialize") {
+                assert!(observed.load(std::sync::atomic::Ordering::SeqCst));
+            }
+            Some(preparation_reply(r))
+        })
+        .await;
+        let client = server.client("sdk2-offload-v1");
+        let execution = preparation_execution(&client);
+        let progress = Mutex::new(Vec::new());
+        let on_progress = |p: PreparationProgress| progress.lock().unwrap().push(p);
+        let on_confirmed = |s: &Session| {
+            assert_eq!(s.id(), "s1");
+            confirmed.store(true, std::sync::atomic::Ordering::SeqCst);
+        };
+        let cancel = CancellationToken::new();
+        let result = client
+            .prepare(
+                CreateOptions {
+                    request_id: Some("retained-key".into()),
+                    resume: Some(ResumeReference {
+                        session_id: "s1".into(),
+                    }),
+                    write: WriteOptions {
+                        cancellation: cancel.clone(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                PreparationOptions {
+                    requested_tools: tools.clone(),
+                    on_progress: Some(&on_progress),
+                    on_session_confirmed: Some(&on_confirmed),
+                    ..PreparationOptions::new(&execution)
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(result.capabilities.capability_revision, "b".repeat(64));
+        let requests = server.requests();
+        assert_eq!(
+            requests
+                .iter()
+                .filter(|r| r.target == "/api/sessions")
+                .count(),
+            1
+        );
+        let body: Value = serde_json::from_slice(
+            &requests
+                .iter()
+                .find(|r| r.target == "/api/sessions")
+                .unwrap()
+                .body,
+        )
+        .unwrap();
+        assert_eq!(body["requestId"], "retained-key");
+        assert_eq!(body["resume"]["sessionId"], "s1");
+        let body: Value = serde_json::from_slice(
+            &requests
+                .iter()
+                .find(|r| r.target.ends_with("/initialize"))
+                .unwrap()
+                .body,
+        )
+        .unwrap();
+        assert_eq!(body.get("requestedTools").is_some(), tools.is_some());
+        let stages: Vec<_> = progress
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|p| p.status == PreparationStatus::Completed)
+            .map(|p| p.stage.as_str())
+            .collect();
+        assert_eq!(
+            stages,
+            vec![
+                "connecting",
+                "session-confirmed",
+                "initializing-capabilities",
+                "ready"
+            ]
+        );
+        cancel.cancel();
+        assert_eq!(result.session.meta().await.unwrap().status, "idle");
+    }
+}
+
+#[tokio::test]
+async fn preparation_cancel_after_confirmation_keeps_identity() {
+    let server = Server::start(|r, _| Some(preparation_reply(r))).await;
+    let client = server.client("sdk2-offload-v1");
+    let execution = preparation_execution(&client);
+    let cancel = CancellationToken::new();
+    let confirmed = |_: &Session| cancel.cancel();
+    let observer = |_: PreparationProgress| panic!("UI failure");
+    let error = client
+        .prepare(
+            CreateOptions {
+                request_id: Some("retained".into()),
+                write: WriteOptions {
+                    cancellation: cancel.clone(),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            PreparationOptions {
+                on_session_confirmed: Some(&confirmed),
+                on_progress: Some(&observer),
+                ..PreparationOptions::new(&execution)
+            },
+        )
+        .await
+        .err()
+        .unwrap();
+    assert!(matches!(error.cause, Error::Cancelled));
+    assert_eq!(error.session.unwrap().id(), "s1");
+    assert_eq!(server.requests().len(), 2);
+}
+
+#[tokio::test]
+async fn preparation_failure_keeps_session_and_does_not_retry() {
+    let server = Server::start(|r, _| {
+        Some(if r.target.ends_with("/initialize") {
+            Reply::json(200, "execution", json!({"invalid":"fixture"}))
+        } else {
+            preparation_reply(r)
+        })
+    })
+    .await;
+    let client = server.client("sdk2-offload-v1");
+    let execution = preparation_execution(&client);
+    let error = client
+        .prepare(
+            CreateOptions {
+                request_id: Some("retained".into()),
+                ..Default::default()
+            },
+            PreparationOptions::new(&execution),
+        )
+        .await
+        .err()
+        .unwrap();
+    assert_eq!(error.stage, PreparationStage::InitializingCapabilities);
+    assert_eq!(error.session.unwrap().id(), "s1");
+    assert_eq!(server.requests().len(), 4);
+}
+
+#[tokio::test]
+async fn preparation_mixed_transport_and_cancelled_input_do_no_io() {
+    let server = Server::start(|r, _| Some(preparation_reply(r))).await;
+    let client = server.client("sdk2-offload-v1");
+    let other = server.client("sdk2-offload-v1");
+    let execution = preparation_execution(&other);
+    assert!(
+        client
+            .prepare(
+                CreateOptions {
+                    request_id: Some("retained".into()),
+                    ..Default::default()
+                },
+                PreparationOptions::new(&execution)
+            )
+            .await
+            .is_err()
+    );
+    let execution = preparation_execution(&client);
+    let cancel = CancellationToken::new();
+    cancel.cancel();
+    let error = client
+        .prepare(
+            CreateOptions {
+                request_id: Some("retained".into()),
+                write: WriteOptions {
+                    cancellation: cancel,
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            PreparationOptions::new(&execution),
+        )
+        .await
+        .err()
+        .unwrap();
+    assert!(matches!(error.cause, Error::Cancelled));
+    assert!(error.session.is_none());
+    assert!(server.requests().is_empty());
+}
+
+#[tokio::test]
+async fn preparation_invalid_cloud_availability_is_still_rejected() {
+    let server=Server::start(|_,_|Some(Reply::json(200,"session",json!({"protocol":"sdk2-ext-v1","contracts":[{"contract":"sdk2-offload-v1","availability":"anything"}]})))).await;
+    let client = server.client("sdk2-offload-v1");
+    let execution = preparation_execution(&client);
+    let error = client
+        .prepare(
+            CreateOptions {
+                request_id: Some("retained".into()),
+                ..Default::default()
+            },
+            PreparationOptions::new(&execution),
+        )
+        .await
+        .err()
+        .unwrap();
+    assert!(error.session.is_none());
+    assert_eq!(server.requests().len(), 1);
+}
+
+#[tokio::test]
+async fn preparation_disabled_capability_does_not_initialize() {
+    let server = Server::start(|r, _| {
+        Some(if r.target.ends_with("/capabilities") {
+            Reply::closure("disabled")
+        } else {
+            preparation_reply(r)
+        })
+    })
+    .await;
+    let client = server.client("sdk2-offload-v1");
+    let execution = preparation_execution(&client);
+    let error = client
+        .prepare(
+            CreateOptions {
+                request_id: Some("retained".into()),
+                ..Default::default()
+            },
+            PreparationOptions::new(&execution),
+        )
+        .await
+        .err()
+        .unwrap();
+    assert_eq!(error.session.unwrap().id(), "s1");
+    assert!(
+        !server
+            .requests()
+            .iter()
+            .any(|r| r.target.ends_with("/initialize"))
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn preparation_independent_attempts_do_not_serialize() {
+    let (entered_tx, entered_rx) = tokio::sync::oneshot::channel();
+    let entered = Mutex::new(Some(entered_tx));
+    let release = CancellationToken::new();
+    let held = release.clone();
+    let server = Server::start(move |r, _| {
+        let mut reply = preparation_reply(r);
+        if r.target == "/api/sessions"
+            && serde_json::from_slice::<Value>(&r.body).unwrap()["requestId"] == "first"
+        {
+            entered.lock().unwrap().take().unwrap().send(()).unwrap();
+            reply.wait = Some(held.clone());
+        }
+        Some(reply)
+    })
+    .await;
+    let client = server.client("sdk2-offload-v1");
+    let first = client.clone();
+    let slow = tokio::spawn(async move {
+        let execution = preparation_execution(&first);
+        first
+            .prepare(
+                CreateOptions {
+                    request_id: Some("first".into()),
+                    ..Default::default()
+                },
+                PreparationOptions::new(&execution),
+            )
+            .await
+    });
+    entered_rx.await.unwrap();
+    let execution = preparation_execution(&client);
+    let fast = tokio::time::timeout(
+        Duration::from_secs(1),
+        client.prepare(
+            CreateOptions {
+                request_id: Some("second".into()),
+                ..Default::default()
+            },
+            PreparationOptions::new(&execution),
+        ),
+    )
+    .await;
+    release.cancel();
+    assert!(
+        fast.is_ok_and(|r| r.is_ok()),
+        "independent preparation was blocked"
+    );
+    assert!(slow.await.unwrap().is_ok());
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn preparation_original_client_cancel_stops_pending_initialize() {
+    let (entered_tx, entered_rx) = tokio::sync::oneshot::channel();
+    let entered = Mutex::new(Some(entered_tx));
+    let release = CancellationToken::new();
+    let held = release.clone();
+    let server = Server::start(move |r, _| {
+        let mut reply = preparation_reply(r);
+        if r.target.ends_with("/initialize") {
+            entered.lock().unwrap().take().unwrap().send(()).unwrap();
+            reply.wait = Some(held.clone());
+        }
+        Some(reply)
+    })
+    .await;
+    let parent = CancellationToken::new();
+    let startup = CancellationToken::new();
+    let child = startup.clone();
+    let client = server
+        .client("sdk2-offload-v1")
+        .with_cancellation(parent.clone());
+    let task = tokio::spawn(async move {
+        let execution = preparation_execution(&client);
+        client
+            .prepare(
+                CreateOptions {
+                    request_id: Some("retained".into()),
+                    write: WriteOptions {
+                        cancellation: child,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                PreparationOptions::new(&execution),
+            )
+            .await
+    });
+    entered_rx.await.unwrap();
+    parent.cancel();
+    let result = tokio::time::timeout(Duration::from_secs(1), task).await;
+    release.cancel();
+    let error = result
+        .expect("parent cancellation waited for HTTP timeout")
+        .unwrap()
+        .err()
+        .unwrap();
+    assert!(matches!(error.cause, Error::Cancelled));
+    assert_eq!(error.session.unwrap().id(), "s1");
+    assert!(
+        !startup.is_cancelled(),
+        "must not cancel caller-owned startup token"
+    );
+}
+
 use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
@@ -33,6 +865,7 @@ struct Reply {
     content_type: &'static str,
     body: Vec<u8>,
     headers: Vec<(&'static str, String)>,
+    wait: Option<CancellationToken>,
 }
 
 impl Reply {
@@ -43,11 +876,14 @@ impl Reply {
             content_type: "application/json",
             body: serde_json::to_vec(&body).unwrap(),
             headers: vec![],
+            wait: None,
         }
     }
     fn closure(state: &str) -> Self {
-        let schema: Value =
-            serde_json::from_slice(include_bytes!("../contract/unified-v1.schema.json")).unwrap();
+        let schema: Value = serde_json::from_slice(include_bytes!(
+            "../src/serve_persistence/assets/unified-v1.schema.json"
+        ))
+        .unwrap();
         let defs = &schema["definitions"]["CapabilityClosure"]["properties"];
         let mut operations = Map::new();
         for name in defs["operations"]["required"].as_array().unwrap() {
@@ -138,6 +974,9 @@ impl Server {
                         all.len() - 1
                     };
                     if let Some(reply) = handler(&request, index) {
+                        if let Some(wait) = &reply.wait {
+                            wait.cancelled().await;
+                        }
                         let mut head = format!(
                             "HTTP/1.1 {} OK\r\nConnection: close\r\nContent-Length: {}\r\nContent-Type: {}\r\ntansr-contract: unified-v1\r\ntansr-manifest-revision: 7\r\ntansr-domain: {}\r\ntansr-schema-hash: none\r\n",
                             reply.status,
@@ -371,6 +1210,7 @@ async fn checkpoint_import_keeps_original_bytes_and_compaction_preserves_failure
                 content_type: "application/octet-stream",
                 body: original.to_vec(),
                 headers: vec![],
+                wait: None,
             });
         }
         if r.target.contains("/import") {

@@ -13,7 +13,9 @@ use std::{
 };
 use tokio::sync::Semaphore;
 use zeroize::{Zeroize, Zeroizing};
+mod authentication_tree;
 mod custody;
+mod indexed;
 pub use custody::{CustodyPort, FencedStore};
 const FORMAT: &str = "tansr-rust-terminal-persistence-v1";
 const META_CAP: usize = 16 << 20;
@@ -131,6 +133,9 @@ struct Inner {
     recovery: Option<AuthorizeRecovery>,
     uncertain: bool,
     fingerprint: Option<String>,
+    indexed: Option<indexed::Indexed>,
+    #[cfg(test)]
+    io: std::cell::Cell<(usize, usize)>,
 }
 /// A validated encrypted copy is not an authority transfer. The target remains
 /// durably read-only, including after ordinary reopen and further copies.
@@ -156,7 +161,27 @@ pub struct FileStore {
     lane: Arc<Semaphore>,
     identity: Identity,
 }
+#[async_trait]
+impl crate::session::PreparationResource for FileStore {
+    async fn stop(&self) -> Result<()> {
+        self.close().await
+    }
+}
 impl FileStore {
+    /// Open only the explicit authenticated indexed V2 medium. No migration or
+    /// legacy fallback is performed; identity, limits, key and original lane are
+    /// unchanged. Complete audit/copy/custody remain explicit maintenance.
+    pub async fn open_indexed(options: StoreOptions) -> Result<Self> {
+        let identity = options.identity.clone();
+        let inner = tokio::task::spawn_blocking(move || Inner::open_indexed(options, true))
+            .await
+            .map_err(|_| integrity())??;
+        Ok(Self {
+            inner: Arc::new(Mutex::new(Some(inner))),
+            lane: Arc::new(Semaphore::new(1)),
+            identity,
+        })
+    }
     pub async fn open(options: StoreOptions) -> Result<Self> {
         let identity = options.identity.clone();
         let inner = tokio::task::spawn_blocking(move || Inner::open(options))
@@ -191,7 +216,9 @@ impl FileStore {
             let before = inner.context()?;
             inner.fixed()?;
             let fingerprint = inner.fingerprint.clone();
-            let result = match action(inner, &before) {
+            let action_result = action(inner, &before);
+            inner.index_reset()?;
+            let result = match action_result {
                 Ok(value) => value,
                 Err(error) => {
                     if inner.uncertain || fingerprint != inner.fingerprint {
@@ -236,7 +263,7 @@ impl FileStore {
         .await
         .map_err(|_| integrity())?
     }
-    /// Copy this complete V1 layout under a different key without changing source
+    /// Copy this complete source layout under a different key without changing source
     /// bytes. The target metadata file must be inside a NEW directory whose
     /// parent already exists and is private. One no-replace directory publication
     /// exposes the complete encrypted copy; errors retain source and staging.
@@ -249,8 +276,11 @@ impl FileStore {
     pub async fn copy_to(&self, path: PathBuf, mut key: [u8; 32]) -> Result<CopyReceipt> {
         let new_key = Zeroizing::new(key);
         key.zeroize();
-        self.run(move |inner, before| inner.copy_to(path, new_key, before))
-            .await
+        self.run(move |inner, before| {
+            inner.index_complete()?;
+            inner.copy_to(path, new_key, before)
+        })
+        .await
     }
     /// Cold-copy an original V1 medium without running normal reopen repairs.
     /// Requires Reopen options. Pending immutable files are authenticated in place,
@@ -283,9 +313,38 @@ impl FileStore {
             )
         })?
     }
+    /// Explicit complete cold-copy of the indexed V2 medium. No source repair,
+    /// implicit legacy migration, or authority transfer is performed.
+    pub async fn copy_from_indexed(
+        options: StoreOptions,
+        path: PathBuf,
+        mut key: [u8; 32],
+    ) -> Result<CopyReceipt> {
+        let new_key = Zeroizing::new(key);
+        key.zeroize();
+        if !matches!(options.mode, OpenMode::Reopen) {
+            return Err(reject("copy_requires_reopen"));
+        }
+        tokio::task::spawn_blocking(move || {
+            let mut source = Inner::open_indexed(options, false)?;
+            source.index_complete()?;
+            let before = source.context()?;
+            let receipt = source.copy_to(path, new_key, &before)?;
+            source.check(&before).map_err(|_| {
+                Error::Unknown("indexed copy published; preserve original paths and keys".into())
+            })?;
+            Ok(receipt)
+        })
+        .await
+        .map_err(|_| Error::Unknown("indexed copy outcome unknown; retain all media".into()))?
+    }
     /// Local trusted maintenance only. No remote list/delete action is exposed.
     pub async fn compact(&self) -> Result<()> {
-        self.run(|inner, before| inner.compact(before)).await
+        self.run(|inner, before| {
+            inner.index_complete()?;
+            inner.compact(before)
+        })
+        .await
     }
 }
 #[async_trait]
@@ -349,6 +408,11 @@ impl Inner {
         if bytes.len() > cap + 28 {
             return Err(integrity());
         }
+        #[cfg(test)]
+        {
+            let (n, b) = self.io.get();
+            self.io.set((n + 1, b + bytes.len()));
+        }
         Ok(bytes)
     }
     fn open(o: StoreOptions) -> Result<Self> {
@@ -397,6 +461,9 @@ impl Inner {
             recovery: o.authorize_recovery,
             uncertain: false,
             fingerprint: None,
+            indexed: None,
+            #[cfg(test)]
+            io: Default::default(),
         };
         let before = inner.context()?;
         match o.mode {
@@ -482,6 +549,7 @@ impl Inner {
                 files.insert(path.clone(), hash(&self.read_file(&path, BLOCK_BYTES)?));
             }
         }
+        self.index_copy_fingerprints(&mut files)?;
         Ok(files)
     }
     fn copy_to(
@@ -556,7 +624,14 @@ impl Inner {
             recovery: self.recovery.clone(),
             uncertain: false,
             fingerprint: None,
+            indexed: self
+                .indexed
+                .as_ref()
+                .map(|_| indexed::Indexed::empty(state.identity.clone(), state.limits)),
+            #[cfg(test)]
+            io: Default::default(),
         };
+        target.index_initialize_copy(&before.clone())?;
         for (object, len) in state.objects.iter().chain(state.retiring.iter()) {
             self.check(before)?;
             if !state.objects.contains_key(object) && !self.object_path(object)?.try_exists()? {
@@ -567,6 +642,7 @@ impl Inner {
                 return Err(integrity());
             }
             let sealed = target.cipher.seal(&plain, &target.object_aad(object)?)?;
+            target.index_burn(sealed.len(), 1, before)?;
             let mut file =
                 platform::open_at(&target.directory, &target.object_path(object)?, true, true)?;
             file.write_all(&sealed)?;
@@ -590,7 +666,7 @@ impl Inner {
             Error::Unknown("persistence copy publication uncertain; retain source, target, staging and both keys".into())
         })?;
         let checked = (|| {
-            let target = Self::open(StoreOptions {
+            let target_options = StoreOptions {
                 path: target_path.clone(),
                 mode: OpenMode::Reopen,
                 key: *key,
@@ -598,7 +674,13 @@ impl Inner {
                 limits: self.state.limits,
                 read_context: self.context.clone(),
                 authorize_recovery: self.recovery.clone(),
-            })?;
+            };
+            let mut target = if self.indexed.is_some() {
+                Self::open_indexed(target_options, true)?
+            } else {
+                Self::open(target_options)?
+            };
+            target.index_complete()?;
             if !target.state.read_only_copy
                 || target.fingerprint.as_ref() != Some(&destination_sha256)
             {
@@ -633,6 +715,7 @@ impl Inner {
         crate::canonical::encode(&json!([FORMAT, self.state.identity, "object", key]))
     }
     fn object(&self, key: &str) -> Result<Zeroizing<Vec<u8>>> {
+        let indexed_length = self.index_object_length(key)?;
         let canonical = self.object_path(key)?;
         let path = if canonical.try_exists()? {
             canonical
@@ -644,6 +727,9 @@ impl Inner {
         let bytes = self.read_file(&path, BLOCK_BYTES)?;
         let plain = self.cipher.open(&bytes, &self.object_aad(key)?)?;
         if plain.is_empty() || plain.len() > BLOCK_BYTES || hash(&plain) != split_key(key)?.1 {
+            return Err(integrity());
+        }
+        if indexed_length.is_some_and(|len| len != plain.len()) {
             return Err(integrity());
         }
         if self
@@ -707,12 +793,22 @@ impl Inner {
         self.check(before)?;
         let path = self.object_path(key)?;
         if path.try_exists()? || self.state.pending_objects.contains_key(key) {
-            if self.object(key)?.as_slice() != bytes {
+            let existing = if self.indexed.is_some()
+                && !self.state.objects.contains_key(key)
+                && !self.state.pending_objects.contains_key(key)
+            {
+                let blob = self.read_file(&path, BLOCK_BYTES)?;
+                self.cipher.open(&blob, &self.object_aad(key)?)?
+            } else {
+                self.object(key)?
+            };
+            if existing.as_slice() != bytes {
                 return Err(integrity());
             }
             return Ok(None);
         }
         let blob = self.cipher.seal(bytes, &self.object_aad(key)?)?;
+        self.index_burn(blob.len(), 1, before)?;
         let temporary = self.temporary()?;
         let result = (|| {
             let mut f = platform::open_at(&self.directory, &temporary, true, true)?;
@@ -774,6 +870,9 @@ impl Inner {
         )))
     }
     fn save(&mut self, next: State, before: &Owner) -> Result<()> {
+        if self.indexed.is_some() {
+            return self.index_save(next, before);
+        }
         if self.state.read_only_copy || (next.read_only_copy && self.fingerprint.is_some()) {
             return Err(reject("copy_read_only"));
         }
@@ -806,6 +905,9 @@ impl Inner {
         result
     }
     fn plan(&self, t: &Ticket) -> Result<Plan> {
+        self.plan_objects(t, &self.state.objects)
+    }
+    fn plan_objects(&self, t: &Ticket, objects: &BTreeMap<String, usize>) -> Result<Plan> {
         let body = &t.begin["body"];
         let index = &t.begin["index"];
         let mut plan = Plan {
@@ -833,7 +935,7 @@ impl Inner {
                 add_ref(
                     &mut plan.objects,
                     &key,
-                    *self.state.objects.get(&key).ok_or_else(integrity)?,
+                    *objects.get(&key).ok_or_else(integrity)?,
                 )?;
                 plan.pages.push(true);
                 if kind == "body-page" {
@@ -921,6 +1023,9 @@ impl Inner {
         )
     }
     fn capacity(&self) -> Result<Value> {
+        if let Some(value) = self.index_capacity()? {
+            return Ok(value);
+        }
         let mut retained = 0;
         let mut reserved = 0;
         let mut reserved_objects = 0;
@@ -991,8 +1096,10 @@ impl Inner {
         // objects cannot be subtracted twice by concurrent tickets. Terminal
         // entry/index/root growth fits the credit released by that ticket.
         let state_value = serde_json::to_value(&self.state)?;
-        let mut physical_bytes = serde_json::to_vec(&state_value)?.len();
-        let mut physical_nodes = node_count(&state_value);
+        let (mut physical_bytes, mut physical_nodes) = self.index_physical_metadata()?.unwrap_or((
+            serde_json::to_vec(&state_value)?.len(),
+            node_count(&state_value),
+        ));
         for t in self
             .state
             .tickets
@@ -1011,10 +1118,12 @@ impl Inner {
         }
         // An object-map member has a bounded ASCII kind/hash key and a raw
         // length <= 12288. 128 bytes also covers its comma and JSON syntax.
-        let object_slots = self.state.objects.len() + self.state.retiring.len();
-        let object_bytes = serde_json::to_vec(&self.state.objects)?.len()
-            + serde_json::to_vec(&self.state.retiring)?.len()
-            - 4;
+        let (indexed_slots, indexed_bytes) = self.index_object_measure()?.unwrap_or((
+            self.state.objects.len(),
+            serde_json::to_vec(&self.state.objects)?.len(),
+        ));
+        let object_slots = indexed_slots + self.state.retiring.len();
+        let object_bytes = indexed_bytes + serde_json::to_vec(&self.state.retiring)?.len() - 4;
         physical_bytes = physical_bytes - object_bytes + l.objects * 128;
         physical_nodes = physical_nodes - object_slots + l.objects;
         // At most one disk-lane publication can await its final rename.
@@ -1063,6 +1172,7 @@ impl Inner {
         if owner != *before {
             return Err(reject("context_changed"));
         }
+        self.index_prepare(&input)?;
         let action = string(&input["action"])?;
         if self.state.read_only_copy && matches!(action, "begin" | "put" | "commit") {
             return Err(reject("copy_read_only"));
@@ -1093,11 +1203,26 @@ impl Inner {
                         return Err(reject("invalid_request"));
                     }
                     let end = (start + num(&input, "length")).min(length);
-                    let refs = self.body_refs(root)?;
                     let mut bytes = Vec::with_capacity(end - start);
                     if start < end {
+                        let first_page = (start / BLOCK_BYTES) / 64;
+                        let last_page = ((end - 1) / BLOCK_BYTES) / 64;
+                        let mut refs = Vec::new();
+                        for page in first_page..=last_page {
+                            let h = array(&root["body"]["pageHashes"])?
+                                .get(page)
+                                .ok_or_else(integrity)?;
+                            let b = self.object(&object_key("body-page", string(h)?))?;
+                            let p = validate_page(
+                                "body-page",
+                                page,
+                                &b,
+                                &json!({"body":root["body"]}),
+                            )?;
+                            refs.extend(array(&p["refs"])?.iter().cloned());
+                        }
                         for idx in start / BLOCK_BYTES..=(end - 1) / BLOCK_BYTES {
-                            let r = refs.get(idx).ok_or_else(integrity)?;
+                            let r = refs.get(idx - first_page * 64).ok_or_else(integrity)?;
                             let b =
                                 self.object(&object_key("body-block", string(&r["sha256"])?))?;
                             if b.len() != num(r, "byteLength") {
@@ -1425,11 +1550,11 @@ impl Inner {
                 Some(r) => string(&r["index"]["root"])?.to_owned(),
                 None => canonical_hash(&json!(["TPV1-INDEX", next.identity]))?,
             };
-            let old = next.primary.len();
+            let old = self.index_primary_count(&next)?;
             for e in p.entries {
                 let e = e.ok_or_else(integrity)?;
                 if !self.entry_existing(&e)? {
-                    let ordinal = (next.primary.len() + 1).to_string();
+                    let ordinal = (self.index_primary_count(&next)? + 1).to_string();
                     index_root = canonical_hash(&json!(["TPV1-ENTRY", index_root, ordinal, e]))?;
                     next.secondary.insert(
                         string(&e["secondaryKey"])?.into(),
@@ -1441,7 +1566,7 @@ impl Inner {
                     );
                 }
             }
-            if next.primary.len() - old != num(&t.begin["index"], "addedCount") {
+            if self.index_primary_count(&next)? - old != num(&t.begin["index"], "addedCount") {
                 return Err(reject("request_conflict"));
             }
             let generation = next
@@ -1456,7 +1581,7 @@ impl Inner {
                 .filter(|v| *v <= i64::MAX as u64)
                 .ok_or_else(|| reject("invalid_request"))?
                 .to_string();
-            let mut root = json!({"generation":generation,"body":t.begin["body"],"index":{"root":index_root,"count":next.primary.len().to_string()}});
+            let mut root = json!({"generation":generation,"body":t.begin["body"],"index":{"root":index_root,"count":self.index_primary_count(&next)?.to_string()}});
             root["commitRoot"] = json!(canonical_hash(&json!(["TPV1-ROOT", next.identity, root]))?);
             Ok(root)
         })();
@@ -1519,6 +1644,9 @@ impl Inner {
         Ok(keep)
     }
     fn compact(&mut self, before: &Owner) -> Result<()> {
+        if self.index_compact(before)? {
+            return Ok(());
+        }
         if self.state.read_only_copy {
             return Err(reject("copy_read_only"));
         }

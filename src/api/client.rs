@@ -160,6 +160,9 @@ pub struct ApiClient {
     inner: Arc<Inner>,
 }
 impl ApiClient {
+    pub(crate) fn shares_transport(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.inner, &other.inner)
+    }
     pub fn builder(base_url: impl Into<String>) -> ClientBuilder {
         ClientBuilder::new(base_url)
     }
